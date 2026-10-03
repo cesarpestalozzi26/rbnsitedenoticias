@@ -7,6 +7,7 @@ import {
   type ElectionRound,
   type ElectionSnapshot,
 } from './types';
+import { findElectionCycle } from './findElectionCycle';
 
 const TSE_HOST = 'resultados.tse.jus.br';
 const MAX_SIGNED_FILE_BYTES = 20 * 1024 * 1024;
@@ -265,11 +266,7 @@ export function discoverTseElectionConfiguration(
   year = ELECTION_YEAR
 ): TSEElectionConfiguration {
   const cycles = asArray(globalConfig.pl);
-  const cycle = cycles.find((item) =>
-    asString(item.c).includes(String(year)) ||
-    asString(item.dt).slice(-4) === String(year) ||
-    asArray(item.e).some((election) => asString(election.nm).includes(String(year)))
-  );
+  const cycle = findElectionCycle(cycles, year);
   if (!cycle) throw new Error(`A configuração oficial do TSE ainda não contém as Eleições ${year}.`);
 
   const elections = asArray(cycle.e);

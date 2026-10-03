@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BRAZILIAN_STATES, DEFAULT_ELECTION_SETTINGS, normalizeElectionSettings } from './types.ts';
 import { getTseCandidatePhotoUrl } from './candidatePhotoUrl.ts';
+import { findElectionCycle } from './findElectionCycle.ts';
 
 test('election settings stay disabled until explicitly enabled', () => {
   const settings = normalizeElectionSettings(null);
@@ -47,4 +48,22 @@ test('candidate photos use only validated official TSE paths', () => {
   assert.equal(getTseCandidatePhotoUrl('../elsewhere', '6257', 'BR', '12345678901'), null);
   assert.equal(getTseCandidatePhotoUrl('ele2026', '6257', 'BR', '12/../../x'), null);
   assert.equal(getTseCandidatePhotoUrl('ele2026', '6257', 'B/', '12345678901'), null);
+});
+
+test('prefers the matching election cycle over supplemental elections in the same year', () => {
+  const supplementaryCycle = {
+    c: 'ele2024',
+    dt: '01/03/2026',
+    e: [{ nm: 'Eleições Suplementares' }],
+  };
+  const generalCycle = {
+    c: 'ele2026',
+    dt: '04/10/2026',
+    e: [{ nm: 'Eleições 2026' }],
+  };
+
+  assert.equal(
+    findElectionCycle([supplementaryCycle, generalCycle], 2026),
+    generalCycle
+  );
 });
