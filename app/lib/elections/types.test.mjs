@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BRAZILIAN_STATES, DEFAULT_ELECTION_SETTINGS, normalizeElectionSettings } from './types.ts';
+import { getTseCandidatePhotoUrl } from './candidatePhotoUrl.ts';
 
 test('election settings stay disabled until explicitly enabled', () => {
   const settings = normalizeElectionSettings(null);
@@ -36,4 +37,14 @@ test('default configuration is not mutated by normalization', () => {
   normalizeElectionSettings({ active: true, selectedStates: [] });
   assert.equal(DEFAULT_ELECTION_SETTINGS.active, false);
   assert.equal(DEFAULT_ELECTION_SETTINGS.selectedStates.length, BRAZILIAN_STATES.length);
+});
+
+test('candidate photos use only validated official TSE paths', () => {
+  assert.equal(
+    getTseCandidatePhotoUrl('ele2026', '6257', 'BR', '12345678901'),
+    'https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/12345678901.jpeg'
+  );
+  assert.equal(getTseCandidatePhotoUrl('../elsewhere', '6257', 'BR', '12345678901'), null);
+  assert.equal(getTseCandidatePhotoUrl('ele2026', '6257', 'BR', '12/../../x'), null);
+  assert.equal(getTseCandidatePhotoUrl('ele2026', '6257', 'B/', '12345678901'), null);
 });

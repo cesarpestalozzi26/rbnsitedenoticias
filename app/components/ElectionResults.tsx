@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { AlertCircle, ExternalLink, Info, MapPin, RefreshCw, Search, Vote } from 'lucide-react';
 import {
   BRAZILIAN_STATES,
@@ -56,6 +57,29 @@ function candidateInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '—';
   return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toLocaleUpperCase('pt-BR');
+}
+
+function CandidateAvatar({ candidate }: { candidate: ElectionCandidate }) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  return (
+    <div className="relative flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-full border-[5px] border-gray-100 bg-white p-1 text-xl font-extrabold text-gray-500 ring-1 ring-gray-100">
+      <span className="absolute left-1/2 top-[-7px] z-10 h-2 w-2 -translate-x-1/2 rounded-full bg-[#e4b000]" aria-hidden="true" />
+      {candidate.photoUrl && !imageFailed ? (
+        <Image
+          src={candidate.photoUrl}
+          alt={`Foto oficial de ${candidate.name}`}
+          width={80}
+          height={80}
+          unoptimized
+          onError={() => setImageFailed(true)}
+          className="h-full w-full rounded-full object-cover"
+        />
+      ) : (
+        <span aria-label={`Iniciais de ${candidate.name}`}>{candidateInitials(candidate.name)}</span>
+      )}
+    </div>
+  );
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -439,16 +463,7 @@ export default function ElectionResults() {
                     {candidates.map((candidate) => (
                       <article key={candidate.id} className="min-h-[200px] rounded-[22px] bg-white p-5 shadow-[0_4px_14px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:p-6">
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border-[5px] border-gray-100 bg-gray-50 text-xl font-extrabold text-gray-500" aria-label={`Identificação de ${candidate.name}`}>
-                              {candidateInitials(candidate.name)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold tracking-wide text-gray-500">
-                                {candidate.party || 'Candidato'}{candidate.number ? ` – ${candidate.number}` : ''}
-                              </p>
-                            </div>
-                          </div>
+                          <CandidateAvatar key={candidate.photoUrl ?? candidate.id} candidate={candidate} />
                           <div className="shrink-0 text-right">
                             <p className="text-2xl font-black leading-none tabular-nums text-[#e4b000] sm:text-[30px]">
                               {formatPercent(candidate.percent)}
@@ -458,6 +473,9 @@ export default function ElectionResults() {
                             </p>
                           </div>
                         </div>
+                        <p className="mt-3 text-sm font-bold tracking-wide text-gray-500">
+                          {candidate.party || 'Candidato'}{candidate.number ? ` – ${candidate.number}` : ''}
+                        </p>
                         <h3 className="mt-3 line-clamp-2 text-xl font-extrabold uppercase leading-tight text-gray-800 sm:text-2xl">
                           {candidate.name}
                         </h3>

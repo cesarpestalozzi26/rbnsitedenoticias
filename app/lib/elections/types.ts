@@ -86,6 +86,7 @@ export type ElectionCandidate = {
   number: string;
   name: string;
   party: string;
+  photoUrl?: string;
   votes: string;
   percent: string;
   position: number;

@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'resultados.tse.jus.br',
+        pathname: '/oficial/**/fotos/**',
+      },
     ],
   },
 };

@@ -6,6 +6,7 @@ A central pública fica em `/apuracao`; a configuração fica em `/admin/apuraca
 
 - A coleta usa exclusivamente arquivos do domínio oficial `resultados.tse.jus.br`.
 - Arquivos JWS compactos são verificados com a chave pública Ed25519 do TSE antes de qualquer resultado ser salvo.
+- Fotos dos candidatos a presidente, governador e senador são carregadas do diretório oficial `ft` do TSE (`<ciclo>/<eleição>/fotos/<uf>/<sqcand>.jpeg`). Se o TSE ainda não publicou uma foto, o cartão exibe as iniciais.
 - Configuração, estado do coletor, trava e snapshots são persistidos na tabela existente `pz_news_settings` do Supabase. Não é necessário criar tabela ou usar armazenamento local.
 - O navegador consulta as APIs do RBN; não faz chamadas diretas ao TSE.
 - A aplicação identifica resultados antigos ou sem verificação recente como desatualizados. Não estima nem substitui resultados oficiais.

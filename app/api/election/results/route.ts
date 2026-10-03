@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getElectionCollectorState, getElectionSettings, getElectionSnapshot } from '@/app/lib/elections/electionStore';
 import { ELECTION_OFFICES, normalizeElectionSettings, type ElectionOffice, type ElectionSnapshot } from '@/app/lib/elections/types';
+import { getTseCandidatePhotoUrl } from '@/app/lib/elections/candidatePhotoUrl';
+import { discoverTseElectionConfiguration } from '@/app/lib/elections/tseProvider';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -91,7 +93,28 @@ export async function GET(request: NextRequest) {
         )
       : snapshot.candidates;
     const start = (page - 1) * perPage;
-    const items = candidates.slice(start, start + perPage);
+    const pageCandidates = candidates.slice(start, start + perPage);
+    let photoCycle: string | null = null;
+    if (collector.verifiedGlobalConfig && ['president', 'governor', 'senator'].includes(office)) {
+      try {
+        photoCycle = discoverTseElectionConfiguration(collector.verifiedGlobalConfig, settings.round)
+          .offices.find((descriptor) =>
+            descriptor.office === office && descriptor.electionCode === snapshot.electionCode
+          )?.cycle ?? null;
+      } catch (error) {
+        console.warn('[ELECTION_API]', 'candidate-photo-config-unavailable', JSON.stringify({
+          office,
+          electionCode: snapshot.electionCode,
+          message: error instanceof Error ? error.message : 'Falha ao identificar o diretório oficial de fotos.',
+        }));
+      }
+    }
+    const items = pageCandidates.map((candidate) => ({
+      ...candidate,
+      photoUrl: photoCycle
+        ? getTseCandidatePhotoUrl(photoCycle, snapshot.electionCode, snapshot.state, candidate.id) ?? undefined
+        : undefined,
+    }));
 
     return NextResponse.json(
       {

@@ -36,6 +36,7 @@ export type TSEOfficeDescriptor = {
   officialLabel: string;
   officeCode: string;
   electionCode: string;
+  cycle: string;
   round: ElectionRound;
   availableAreas: string[];
   secondRoundAvailable: boolean;
@@ -295,6 +296,7 @@ export function discoverTseElectionConfiguration(
           officialLabel,
           officeCode,
           electionCode: electionId,
+          cycle: asString(cycle.c),
           round,
           availableAreas: office === 'president'
             ? ['br']
