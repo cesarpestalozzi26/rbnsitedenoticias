@@ -2283,7 +2283,14 @@ export default function GeradorCardPage() {
           return;
         }
 
-        const message = error instanceof Error ? error.message : 'Erro ao gerar card.';
+        console.error('[CARD_VIDEO_GENERATION]', error);
+        const message = error instanceof Error
+          ? error.message
+          : typeof error === 'string' && error.trim()
+            ? error
+            : error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.trim()
+              ? error.message
+              : 'Não foi possível gerar o vídeo. Verifique o arquivo e tente novamente.';
         setErrorMessage(message);
       } finally {
         if (previewRequestId === previewRequestIdRef.current) {
