@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/termos',
     '/servicos',
     '/pesquisa',
+    '/apuracao',
     '/conta-rbn',
     '/categoria/politica',
     '/categoria/brasil',

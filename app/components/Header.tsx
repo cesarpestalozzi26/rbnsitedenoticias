@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Search, Bell, UserRound } from 'lucide-react';
+import { Menu, X, Search, Bell, UserRound, Radio } from 'lucide-react';
 import { getCategoryDisplayName, normalizeCategorySlug } from '@/app/lib/categoryLabels';
 import { useSettings } from '@/app/lib/settings';
 import { readManagedCategories } from '@/app/lib/managedCategories';
@@ -14,6 +14,14 @@ function getFirstName(value: string) {
   const first = value.trim().split(/\s+/)[0];
   return first || 'Conta';
 }
+
+type ElectionNavigation = {
+  active: boolean;
+  visible: boolean;
+  highlighted: boolean;
+  publicPageEnabled: boolean;
+  buttonText: string;
+};
 
 export default function Header() {
   const router = useRouter();
@@ -25,9 +33,37 @@ export default function Header() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [accountFirstName, setAccountFirstName] = useState('');
   const [currentDate, setCurrentDate] = useState<string | null>(null);
+  const [electionNavigation, setElectionNavigation] = useState<ElectionNavigation | null>(null);
 
   useEffect(() => {
-    setCurrentDate(new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    const timeout = window.setTimeout(() => {
+      setCurrentDate(new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetch('/api/election/settings')
+      .then(async (response) => {
+        const data = await response.json() as { ok?: boolean } & Partial<ElectionNavigation>;
+        if (!response.ok || !data.ok) throw new Error(`Falha ao carregar botão da apuração (${response.status}).`);
+        if (active) {
+          setElectionNavigation({
+            active: data.active === true,
+            visible: data.visible === true,
+            highlighted: data.highlighted === true,
+            publicPageEnabled: data.publicPageEnabled === true,
+            buttonText: typeof data.buttonText === 'string' ? data.buttonText : 'Apuração Eleitoral',
+          });
+        }
+      })
+      .catch((error: unknown) => {
+        console.error('[ELECTION_NAV]', 'settings-load-failed', error);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -164,6 +200,12 @@ export default function Header() {
         .sort((left, right) => (left.name || '').localeCompare(right.name || '')),
     [managedCategories]
   );
+  const showElectionNavigation = Boolean(
+    electionNavigation?.active && electionNavigation.visible && electionNavigation.publicPageEnabled
+  );
+  const electionNavigationClass = electionNavigation?.highlighted
+    ? 'border border-[#991B1B] bg-[#991B1B] text-white shadow-[0_8px_20px_rgba(153,27,27,0.25)] hover:bg-[#7f1d1d]'
+    : 'border border-gray-300 bg-white text-gray-800 hover:border-[#991B1B] hover:text-[#991B1B]';
 
   return (
     <>
@@ -228,6 +270,16 @@ export default function Header() {
             </form>
 
             <div className="flex items-center gap-1.5">
+              {showElectionNavigation && (
+                <Link
+                  href="/apuracao"
+                  aria-label={`${electionNavigation?.buttonText} - Eleições 2026`}
+                  className={`hidden items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-bold uppercase tracking-wide transition md:inline-flex ${electionNavigationClass}`}
+                >
+                  <Radio className="h-4 w-4" aria-hidden="true" />
+                  <span>{electionNavigation?.buttonText}</span>
+                </Link>
+              )}
               <Link
                 href="/pesquisa"
                 aria-label="Ir para a página de pesquisa"
@@ -294,6 +346,17 @@ export default function Header() {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="border-b border-gray-200 bg-white p-4 md:hidden">
+          {showElectionNavigation && (
+            <Link
+              href="/apuracao"
+              onClick={() => setIsMenuOpen(false)}
+              aria-label={`${electionNavigation?.buttonText} - Eleições 2026`}
+              className={`mb-3 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold uppercase tracking-wide transition ${electionNavigationClass}`}
+            >
+              <Radio className="h-4 w-4" aria-hidden="true" />
+              {electionNavigation?.buttonText}
+            </Link>
+          )}
           <Link
             href="/conta-rbn?mode=login"
             onClick={() => setIsMenuOpen(false)}
