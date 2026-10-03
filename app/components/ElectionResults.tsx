@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Clock3, ExternalLink, RefreshCw, Search, Vote } from 'lucide-react';
+import { AlertCircle, ExternalLink, Info, MapPin, RefreshCw, Search, Vote } from 'lucide-react';
 import {
   BRAZILIAN_STATES,
   ELECTION_OFFICE_LABELS,
@@ -45,6 +45,17 @@ function formatNumber(value: string) {
 function formatPercent(value: string) {
   if (!/^\d+(,\d+)?$/.test(value)) return '—';
   return `${value}%`;
+}
+
+function percentValue(value: string) {
+  if (!/^\d+(,\d+)?$/.test(value)) return 0;
+  return Math.min(100, Math.max(0, Number(value.replace(',', '.'))));
+}
+
+function candidateInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '—';
+  return `${parts[0][0]}${parts.length > 1 ? parts[parts.length - 1][0] : ''}`.toLocaleUpperCase('pt-BR');
 }
 
 function formatDateTime(value: string | null | undefined) {
@@ -179,6 +190,7 @@ export default function ElectionResults() {
   const snapshot = result?.snapshot;
   const candidates = result?.candidates ?? [];
   const totalPages = result?.totalPages ?? 0;
+  const progress = percentValue(snapshot?.totalization.percentCounted ?? '');
 
   const changeOffice = (value: string) => {
     setOffice(value as ElectionOffice);
@@ -191,30 +203,110 @@ export default function ElectionResults() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16">
-      <section className="bg-[#101010] text-white">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-300">RBN • Eleições 2026</p>
-          <h1 className="mt-3 flex items-center gap-3 text-3xl font-black sm:text-4xl">
-            <Vote className="h-9 w-9 text-red-400" aria-hidden="true" />
-            Apuração Eleitoral
-          </h1>
-          <p className="mt-4 max-w-3xl text-sm leading-6 text-gray-300 sm:text-base">
-            Acompanhe os resultados oficiais publicados pelo Tribunal Superior Eleitoral. Os dados são coletados e validados pelo RBN; a atualização depende da divulgação oficial do TSE.
-          </p>
-          <a
-            href="https://resultados.tse.jus.br"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-red-200 underline underline-offset-4 hover:text-white"
-          >
-            Consultar portal oficial do TSE
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </a>
+    <div className="min-h-screen bg-[#f3f3f3] pb-12">
+      <section className="border-t-[5px] border-[#efbd00] bg-white shadow-sm">
+        <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-x-8 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-5">
+            <div className="flex shrink-0 flex-col leading-none" aria-label="Eleições 2026">
+              <span className="text-[10px] font-black uppercase tracking-tight text-gray-700">Eleições</span>
+              <span className="text-2xl font-black tracking-[-0.06em] text-[#e0ad00]">2026</span>
+              <span className="mt-0.5 text-[6px] font-bold uppercase tracking-[0.1em] text-gray-500">RBN • informação</span>
+            </div>
+            <div className="h-10 w-px bg-gray-200" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Apuração eleitoral</p>
+              <h1 className="truncate text-base font-bold text-gray-900 sm:text-xl">Eleição Geral Ordinária 2026</h1>
+            </div>
+          </div>
+          <nav aria-label="Navegação da apuração" className="flex items-center gap-5 overflow-x-auto text-sm">
+            <a href="#resultados" className="shrink-0 border-b-[3px] border-[#efbd00] py-3 font-extrabold text-gray-900">Resultados</a>
+            <a href="#resumo-geral" className="shrink-0 py-3 font-medium text-gray-600 transition hover:text-gray-950">Resumo geral</a>
+            <a
+              href="https://resultados.tse.jus.br"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex shrink-0 items-center gap-1.5 py-3 font-medium text-gray-600 transition hover:text-gray-950"
+            >
+              TSE oficial
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          </nav>
+        </div>
+
+        <div className="border-t border-gray-100 bg-[#fafafa]">
+          <div className="mx-auto grid max-w-[1480px] grid-cols-2 items-end gap-x-5 gap-y-3 px-4 py-3 sm:px-6 lg:grid-cols-[185px_120px_minmax(220px,1fr)_minmax(220px,1.2fr)_auto] lg:gap-x-8 lg:px-8">
+            {office === 'president' ? (
+              <div className="flex min-w-0 items-center gap-3 pb-1">
+                <MapPin className="h-6 w-6 shrink-0 fill-[#efbd00] text-[#efbd00]" aria-hidden="true" />
+                <span className="text-lg font-bold text-gray-800">Brasil</span>
+              </div>
+            ) : (
+              <label className="min-w-0 space-y-1">
+                <span className="block text-[11px] font-bold uppercase tracking-wide text-gray-500">Localização</span>
+                <span className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 shrink-0 text-[#e0ad00]" aria-hidden="true" />
+                  <select
+                    value={state}
+                    onChange={(event) => changeState(event.target.value)}
+                    disabled={!availableStates.length}
+                    className="w-full appearance-none bg-transparent py-1 text-lg font-bold text-gray-800 outline-none disabled:opacity-50"
+                  >
+                    {availableStates.map((item) => (
+                      <option key={item.code} value={item.code}>{item.name}</option>
+                    ))}
+                  </select>
+                </span>
+              </label>
+            )}
+            <div className="min-w-0">
+              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500">Turno</span>
+              <span className="inline-flex rounded-lg bg-[#efbd00] px-4 py-1.5 text-base font-extrabold text-gray-900">
+                {settings?.round ?? 1}º
+              </span>
+            </div>
+            <label className="col-span-2 min-w-0 space-y-1 lg:col-span-1">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-gray-500">Cargo</span>
+              <select
+                value={office}
+                onChange={(event) => changeOffice(event.target.value)}
+                disabled={!availableOffices.length}
+                className="w-full appearance-none border-b border-gray-300 bg-transparent py-2 text-base font-bold text-gray-800 outline-none focus:border-[#d1a700]"
+              >
+                {(availableOffices.length ? availableOffices : [office]).map((item) => (
+                  <option key={item} value={item}>{ELECTION_OFFICE_LABELS[item]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="col-span-2 min-w-0 space-y-1 lg:col-span-1">
+              <span className="block text-[11px] font-bold uppercase tracking-wide text-gray-500">Buscar candidato</span>
+              <span className="relative block">
+                <Search className="absolute left-0 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value.slice(0, 80));
+                    setPage(1);
+                  }}
+                  placeholder="Nome, número ou partido"
+                  className="w-full border-b border-gray-300 bg-transparent py-2 pl-6 pr-2 text-sm outline-none placeholder:text-gray-400 focus:border-[#d1a700]"
+                />
+              </span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setRefreshKey((current) => current + 1)}
+              disabled={loading}
+              className="col-span-2 mb-0.5 inline-flex items-center justify-self-end gap-2 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-bold text-gray-700 transition hover:bg-gray-300 disabled:opacity-50 lg:col-span-1"
+            >
+              <RefreshCw className={`h-4 w-4 text-[#d2a900] ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+              Atualizar
+            </button>
+          </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1480px] px-4 py-7 sm:px-6 lg:px-8">
         {settingsError && (
           <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
             <div className="flex items-start gap-3">
@@ -228,159 +320,154 @@ export default function ElectionResults() {
         )}
 
         {settings && (!settings.active || !settings.publicPageEnabled) && (
-          <div role="status" className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-700">
+          <div role="status" className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-700 shadow-sm">
             A apuração eleitoral ainda não foi habilitada para publicação pelo portal.
           </div>
         )}
 
         {settings && settings.active && settings.publicPageEnabled && (
           <>
-            <section aria-label="Filtros de resultados" className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)]">
-                <label className="space-y-2 text-sm font-bold text-gray-800">
-                  Cargo
-                  <select
-                    value={office}
-                    onChange={(event) => changeOffice(event.target.value)}
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 font-medium outline-none focus:border-[#991B1B] focus:ring-2 focus:ring-[#991B1B]/10"
-                  >
-                    {availableOffices.map((item) => (
-                      <option key={item} value={item}>{ELECTION_OFFICE_LABELS[item]}</option>
-                    ))}
-                  </select>
-                </label>
-                {office !== 'president' && (
-                  <label className="space-y-2 text-sm font-bold text-gray-800">
-                    Estado
-                    <select
-                      value={state}
-                      onChange={(event) => changeState(event.target.value)}
-                      disabled={!availableStates.length}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 font-medium outline-none focus:border-[#991B1B] focus:ring-2 focus:ring-[#991B1B]/10 disabled:bg-gray-100"
-                    >
-                      {availableStates.map((item) => (
-                        <option key={item.code} value={item.code}>{item.name} ({item.code})</option>
-                      ))}
-                    </select>
-                  </label>
+            <div id="resultados" className="grid scroll-mt-8 items-start gap-5 lg:grid-cols-[minmax(280px,0.72fr)_minmax(0,1.55fr)]">
+              <aside id="resumo-geral" className="space-y-4 scroll-mt-8">
+                {snapshot ? (
+                  <>
+                    <section aria-label="Dados gerais da apuração" className="rounded-[22px] bg-white p-5 shadow-[0_3px_12px_rgba(0,0,0,0.07)] sm:p-6">
+                      <h2 className="text-[22px] font-extrabold text-gray-800">Dados Gerais</h2>
+                      <p className="mt-3 text-xs font-medium leading-5 text-gray-500">
+                        Última atualização {formatDateTime(snapshot.sourceUpdatedAt)} (Horário local)
+                      </p>
+                      <dl className="mt-5 space-y-3">
+                        <div className="flex items-baseline justify-between gap-4 text-[15px]">
+                          <dt className="text-gray-700">Número de vagas</dt>
+                          <dd className="font-extrabold tabular-nums text-gray-800">{formatNumber(snapshot.seats)}</dd>
+                        </div>
+                        <div className="flex items-baseline justify-between gap-4 text-[15px]">
+                          <dt className="text-gray-700">Total de seções</dt>
+                          <dd className="font-extrabold tabular-nums text-gray-800">{formatNumber(snapshot.totalization.totalSections)}</dd>
+                        </div>
+                        <div className="flex items-baseline justify-between gap-4 text-[15px]">
+                          <dt className="text-gray-700">Seções totalizadas</dt>
+                          <dd className="font-extrabold tabular-nums text-gray-800">{formatNumber(snapshot.totalization.sectionsCounted)}</dd>
+                        </div>
+                      </dl>
+                      <div
+                        className="mt-2 h-7 overflow-hidden rounded-md bg-[#e7e7e7]"
+                        role="progressbar"
+                        aria-label="Percentual de seções totalizadas"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={progress}
+                      >
+                        <div className="flex h-full items-center justify-center bg-[#e7e7e7] text-sm font-extrabold text-gray-900" style={{ width: `${Math.max(progress, 15)}%` }}>
+                          {formatPercent(snapshot.totalization.percentCounted)}
+                        </div>
+                      </div>
+                    </section>
+
+                    <section aria-label="Votação oficial" className="rounded-[22px] bg-white p-4 shadow-[0_3px_12px_rgba(0,0,0,0.07)] sm:p-5">
+                      <h2 className="text-lg font-extrabold text-gray-500">Votação</h2>
+                      <div className="mt-3 h-4 overflow-hidden rounded-full bg-[#eceeef]">
+                        <div className="h-full rounded-full bg-[#9cb833] transition-[width]" style={{ width: `${progress}%` }} />
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {formatNumber(snapshot.totalization.sectionsCounted)} seções totalizadas
+                      </p>
+                      <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-gray-700">Votos válidos</span>
+                        <span className="font-extrabold tabular-nums text-gray-800">{formatNumber(snapshot.totalization.validVotes)}</span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 text-xs leading-5 text-gray-500">
+                        <Info className="h-4 w-4 shrink-0 text-[#d7aa00]" aria-hidden="true" />
+                        Exibimos somente totais presentes no arquivo oficial recebido do TSE.
+                      </div>
+                    </section>
+                  </>
+                ) : (
+                  <section className="rounded-[22px] bg-white p-5 shadow-[0_3px_12px_rgba(0,0,0,0.07)]">
+                    <h2 className="text-xl font-extrabold text-gray-800">Dados Gerais</h2>
+                    <p className="mt-2 text-sm leading-6 text-gray-600">O resumo aparecerá quando houver um arquivo oficial validado para esta eleição, cargo e localidade.</p>
+                  </section>
                 )}
-                <label className="space-y-2 text-sm font-bold text-gray-800">
-                  Buscar candidato, número ou partido
-                  <span className="relative block">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-                    <input
-                      type="search"
-                      value={query}
-                      onChange={(event) => {
-                        setQuery(event.target.value.slice(0, 80));
-                        setPage(1);
-                      }}
-                      placeholder="Digite para filtrar"
-                      className="w-full rounded-xl border border-gray-300 py-3 pl-10 pr-4 font-normal outline-none focus:border-[#991B1B] focus:ring-2 focus:ring-[#991B1B]/10"
-                    />
-                  </span>
-                </label>
-              </div>
-            </section>
+              </aside>
 
-            {snapshot && (
-              <section aria-label="Resumo da apuração" className="rounded-2xl bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
+              <section aria-labelledby="election-candidate-results" className="min-w-0">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      {snapshot.electionYear} • {snapshot.round}º turno • {snapshot.stateLabel}
-                    </p>
-                    <h2 className="mt-2 text-xl font-black text-gray-950">{snapshot.officeLabel}</h2>
+                    <span className="inline-flex rounded-b-lg bg-[#758b2c] px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white">
+                      {ELECTION_OFFICE_LABELS[office]}
+                    </span>
+                    <p className="mt-3 text-xs font-bold uppercase tracking-[0.12em] text-[#d3a800]">Nominal</p>
+                    <h2 id="election-candidate-results" className="sr-only">Resultados por candidato</h2>
                   </div>
-                  <div className={`rounded-full px-3 py-1.5 text-xs font-bold ${result?.isLive ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-900'}`}>
-                    {result?.isLive ? 'Atualização recente do TSE' : 'Dados sem confirmação de atualização recente'}
-                  </div>
-                </div>
-                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase text-gray-500">Seções apuradas</p>
-                    <p className="mt-2 text-lg font-black text-gray-900">{formatNumber(snapshot.totalization.sectionsCounted)}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase text-gray-500">Total de seções</p>
-                    <p className="mt-2 text-lg font-black text-gray-900">{formatNumber(snapshot.totalization.totalSections)}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase text-gray-500">Apuração</p>
-                    <p className="mt-2 text-lg font-black text-gray-900">{formatPercent(snapshot.totalization.percentCounted)}</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-xs font-semibold uppercase text-gray-500">Votos válidos</p>
-                    <p className="mt-2 text-lg font-black text-gray-900">{formatNumber(snapshot.totalization.validVotes)}</p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className={`rounded-full px-3 py-1.5 font-bold ${result?.isLive ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-900'}`}>
+                      {result?.isLive ? 'Atualização recente' : 'Sem atualização recente'}
+                    </span>
+                    <span className="hidden sm:inline">{formatDateTime(result?.snapshot?.fetchedAt)}</span>
                   </div>
                 </div>
-              </section>
-            )}
-
-            <section aria-labelledby="election-candidate-results" className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
-                <div>
-                  <h2 id="election-candidate-results" className="font-bold text-gray-950">Resultados por candidato</h2>
-                  <p className="mt-1 text-xs text-gray-500">{result?.totalCandidates ?? 0} candidatos neste resultado</p>
-                </div>
-                <p className="inline-flex items-center gap-1.5 text-xs text-gray-500">
-                  <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                  Verificado: {formatDateTime(result?.snapshot?.fetchedAt)}
-                </p>
-              </div>
 
               {result?.message && (
-                <div role="status" className="border-b border-gray-100 bg-gray-50 px-5 py-3 text-sm text-gray-700">
+                <div role="status" className="mb-4 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm text-gray-700 shadow-sm">
                   {result.message}
                 </div>
               )}
 
               {result?.error && (
-                <div role="alert" className="m-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                   {result.error}
                 </div>
               )}
 
               {loading && !result && (
-                <div role="status" className="p-10 text-center text-sm text-gray-500">Carregando dados oficiais...</div>
+                <div role="status" className="rounded-[22px] bg-white p-10 text-center text-sm text-gray-500 shadow-sm">Carregando dados oficiais...</div>
               )}
 
               {!loading && !result?.error && !snapshot && (
-                <div className="p-10 text-center text-sm text-gray-600">
-                  Nenhum resultado oficial validado foi recebido para esta seleção. Os votos não são estimados nem preenchidos com dados fictícios.
+                <div className="rounded-[22px] bg-white p-8 text-center shadow-sm sm:p-12">
+                  <Vote className="mx-auto h-10 w-10 text-[#d6aa00]" aria-hidden="true" />
+                  <p className="mt-4 font-bold text-gray-800">Aguardando resultados oficiais</p>
+                  <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-600">
+                    Ainda não recebemos resultados validados do TSE para {ELECTION_OFFICE_LABELS[office]} em {office === 'president' ? 'Brasil' : (availableStates.find((item) => item.code === state)?.name ?? state)}. Nenhum voto é estimado ou preenchido com dados fictícios.
+                  </p>
                 </div>
               )}
 
               {snapshot && candidates.length > 0 && (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[680px] border-collapse text-left">
-                      <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                        <tr>
-                          <th scope="col" className="px-5 py-3 font-bold">Posição</th>
-                          <th scope="col" className="px-5 py-3 font-bold">Candidato</th>
-                          <th scope="col" className="px-5 py-3 font-bold">Partido</th>
-                          <th scope="col" className="px-5 py-3 text-right font-bold">Votos</th>
-                          <th scope="col" className="px-5 py-3 text-right font-bold">Percentual</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {candidates.map((candidate) => (
-                          <tr key={candidate.id} className="hover:bg-gray-50">
-                            <td className="px-5 py-4 text-sm font-bold text-gray-500">{candidate.position}º</td>
-                            <td className="px-5 py-4">
-                              <p className="font-bold text-gray-950">{candidate.name}</p>
-                              <p className="mt-1 text-xs text-gray-500">Número {candidate.number}</p>
-                            </td>
-                            <td className="px-5 py-4 text-sm font-semibold text-gray-700">{candidate.party || '—'}</td>
-                            <td className="px-5 py-4 text-right text-sm font-bold tabular-nums text-gray-900">{formatNumber(candidate.votes)}</td>
-                            <td className="px-5 py-4 text-right text-sm font-semibold tabular-nums text-gray-700">{formatPercent(candidate.percent)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {candidates.map((candidate) => (
+                      <article key={candidate.id} className="min-h-[200px] rounded-[22px] bg-white p-5 shadow-[0_4px_14px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] sm:p-6">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border-[5px] border-gray-100 bg-gray-50 text-xl font-extrabold text-gray-500" aria-label={`Identificação de ${candidate.name}`}>
+                              {candidateInitials(candidate.name)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold tracking-wide text-gray-500">
+                                {candidate.party || 'Candidato'}{candidate.number ? ` – ${candidate.number}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-2xl font-black leading-none tabular-nums text-[#e4b000] sm:text-[30px]">
+                              {formatPercent(candidate.percent)}
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-gray-600">
+                              {formatNumber(candidate.votes)} votos
+                            </p>
+                          </div>
+                        </div>
+                        <h3 className="mt-3 line-clamp-2 text-xl font-extrabold uppercase leading-tight text-gray-800 sm:text-2xl">
+                          {candidate.name}
+                        </h3>
+                        {candidate.officialStatus && (
+                          <p className="mt-2 text-xs font-semibold text-gray-500">{candidate.officialStatus}</p>
+                        )}
+                      </article>
+                    ))}
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-5 py-4">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-5 py-4 shadow-sm">
                     <p className="text-sm text-gray-600">Página {page} de {totalPages || 1}</p>
                     <div className="flex items-center gap-2">
                       <button
@@ -405,21 +492,13 @@ export default function ElectionResults() {
               )}
 
               {snapshot && candidates.length === 0 && !loading && (
-                <div className="p-10 text-center text-sm text-gray-600">Nenhum candidato corresponde à busca.</div>
+                <div className="rounded-[22px] bg-white p-10 text-center text-sm text-gray-600 shadow-sm">Nenhum candidato corresponde à busca.</div>
               )}
-            </section>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
-              <p>Fonte dos dados: Tribunal Superior Eleitoral. O RBN não altera nem estima resultados.</p>
-              <button
-                type="button"
-                onClick={() => setRefreshKey((current) => current + 1)}
-                disabled={loading}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-                Atualizar resultados{refreshTime ? ` • ${refreshTime.toLocaleTimeString('pt-BR')}` : ''}
-              </button>
+              </section>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-gray-300 pt-4 text-xs text-gray-500">
+              <p>Fonte: Tribunal Superior Eleitoral. O RBN não altera nem estima resultados.</p>
+              <p>Atualizado nesta tela: {refreshTime ? refreshTime.toLocaleTimeString('pt-BR') : 'aguardando consulta'}</p>
             </div>
           </>
         )}
