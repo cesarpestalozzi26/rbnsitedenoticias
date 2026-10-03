@@ -390,7 +390,11 @@ async function getFfmpegInstance(onLog?: (message: string) => void) {
         toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
       ]);
-      await ffmpeg.load({ coreURL, wasmURL });
+      await ffmpeg.load({
+        coreURL,
+        wasmURL,
+        classWorkerURL: `${window.location.origin}${baseURL}/worker.js`,
+      });
       return ffmpeg;
     })().catch((error) => {
       ffmpegInstancePromise = null;
