@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { uploadMedia } from '@/app/lib/uploadMedia';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Save, Trash2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -35,13 +36,9 @@ function escapeHtml(content: string) {
     .replace(/'/g, '&#39;');
 }
 
+// Envia ao Supabase Storage e devolve a URL pública (evita HTTP 413).
 function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+  return uploadMedia(file, file.name);
 }
 
 type AudienceRecipient = {

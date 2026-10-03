@@ -2,6 +2,7 @@
 
 import { ArrowDown, ArrowUp, CheckCircle2, ImagePlus, Link2, Pencil, RotateCw, Trash2, Video, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { uploadDataUrlOrKeep, uploadMedia } from '../lib/uploadMedia';
 
 export interface ArticleImage {
   id: string;
@@ -37,15 +38,6 @@ interface EditorState {
   source: string;
   name: string;
   targetId?: string;
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
 }
 
 function getAspectRatio(value: string) {
@@ -201,7 +193,14 @@ export default function ArticleMediaManager({
       return;
     }
 
-    const dataUrl = await fileToDataUrl(file);
+    let dataUrl: string;
+    try {
+      dataUrl = await uploadMedia(file, file.name);
+    } catch (error) {
+      event.target.value = '';
+      window.alert(error instanceof Error ? error.message : 'Falha ao enviar a imagem.');
+      return;
+    }
     const nextImage: ArticleImage = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       url: dataUrl,
@@ -226,7 +225,8 @@ export default function ArticleMediaManager({
     }
 
     const image = new Image();
-    image.onload = () => {
+    image.crossOrigin = 'anonymous';
+    image.onload = async () => {
       const ratio = editorRatio === 'original' ? image.width / image.height : getAspectRatio(editorRatio);
       const outputWidth = 1600;
       const outputHeight = Math.max(400, Math.round(outputWidth / (ratio || 1)));
@@ -249,7 +249,13 @@ export default function ArticleMediaManager({
       context.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
       context.restore();
 
-      const editedUrl = tempCanvas.toDataURL('image/jpeg', 0.95);
+      let editedUrl: string;
+      try {
+        editedUrl = await uploadDataUrlOrKeep(tempCanvas.toDataURL('image/jpeg', 0.92), `${editorState.name || 'imagem'}.jpg`);
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'Falha ao salvar a imagem editada.');
+        return;
+      }
       if (editorState.targetId) {
         const nextImages = images.map((imageItem) => (imageItem.id === editorState.targetId ? { ...imageItem, url: editedUrl, name: editorState.name } : imageItem));
         emitChange(nextImages, videos);
@@ -280,7 +286,14 @@ export default function ArticleMediaManager({
       return;
     }
 
-    const videoUrl = await fileToDataUrl(file);
+    let videoUrl: string;
+    try {
+      videoUrl = await uploadMedia(file, file.name);
+    } catch (error) {
+      event.target.value = '';
+      window.alert(error instanceof Error ? error.message : 'Falha ao enviar o vídeo.');
+      return;
+    }
     const newVideo: ArticleVideo = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       url: videoUrl,

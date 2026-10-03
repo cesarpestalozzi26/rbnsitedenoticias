@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import {
   AlignCenter,
@@ -21,6 +21,7 @@ import {
   Underline,
   Video,
 } from 'lucide-react';
+import { uploadMedia } from '@/app/lib/uploadMedia';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import ArticleBodyContent, { resolveInlineMediaContent } from '@/app/components/ArticleBodyContent';
 import type { ArticleImage, ArticleVideo } from '@/app/components/ArticleMediaManager';
@@ -72,13 +73,9 @@ function applyInlineImageLayout(figure: HTMLElement, width: number, alignment: I
   figure.style.margin = '1.5rem auto';
 }
 
+// Envia ao Supabase Storage e devolve a URL pública (evita HTTP 413).
 function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
+  return uploadMedia(file, file.name);
 }
 
 function buildInlineMediaHtml(kind: 'image' | 'video', src: string, caption: string) {
@@ -486,11 +483,19 @@ export default function HtmlEditor({
         try {
           const registeredMedia = await onRegisterMedia(mediaModal.kind ?? 'image', mediaModal.selectedFile, mediaModal.caption);
           src = registeredMedia.url;
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'Falha ao enviar a mídia.');
+          return;
         } finally {
           setIsRegisteringMedia(false);
         }
       } else {
-        src = await fileToDataUrl(mediaModal.selectedFile);
+        try {
+          src = await fileToDataUrl(mediaModal.selectedFile);
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'Falha ao enviar a mídia.');
+          return;
+        }
       }
     }
 
