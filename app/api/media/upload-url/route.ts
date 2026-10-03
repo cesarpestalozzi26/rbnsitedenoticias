@@ -50,7 +50,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Arquivo maior que 50 MB. Use um link de vídeo ou comprima o arquivo.' }, { status: 413 });
   }
 
-  const headers = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' };
+  const headers: Record<string, string> = { apikey: serviceKey, 'Content-Type': 'application/json' };
+  // Chaves no formato novo (sb_secret_...) não são JWT e vão apenas em apikey.
+  if (serviceKey.startsWith('eyJ')) headers.Authorization = `Bearer ${serviceKey}`;
 
   // Cria o bucket público na primeira vez; erro "já existe" é ignorado.
   await fetch(`${supabaseUrl}/storage/v1/bucket`, {
