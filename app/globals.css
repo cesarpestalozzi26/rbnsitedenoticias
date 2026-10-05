@@ -199,11 +199,13 @@ button:hover {
   background-color: #2a2a2a;
 }
 
-/* Images */
-img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+/* Images (em @layer base para não anular utilitários como h-full/object-cover) */
+@layer base {
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
 }
 
 /* Table Styles */
