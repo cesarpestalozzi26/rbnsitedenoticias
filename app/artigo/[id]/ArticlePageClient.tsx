@@ -720,7 +720,7 @@ export default function ArticlePageClient() {
               <div className="mt-6 mb-5 grid gap-5 md:mb-6">
                 {mediaImages.filter((image: MediaImageItem) => image.placement !== 'inline').map((image: MediaImageItem) => (
                   <figure key={image.id} className="m-0">
-                    <img src={image.url} alt={image.alt || article?.title || 'Imagem da matéria'} className="block h-[420px] w-full rounded-2xl object-cover shadow-sm" />
+                    <img src={image.url} alt={image.alt || article?.title || 'Imagem da matéria'} className="block h-auto w-full rounded-2xl shadow-sm" />
                     {image.caption && (
                       <figcaption className="mt-2 px-1 text-sm leading-relaxed text-gray-600">
                         {image.caption}
