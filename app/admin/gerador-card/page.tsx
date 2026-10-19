@@ -1287,10 +1287,10 @@ export default function GeradorCardPage() {
   const [cardOverlayEnd, setCardOverlayEnd] = useState(5);
   const [socialLinks, setSocialLinks] = useState<SocialLinksState>(() => readSocialLinksFromStorage());
   const [socialFont, setSocialFont] = useState<TitleFont>('montserrat-semibold');
-  const [socialFontSize, setSocialFontSize] = useState(28);
+  const [socialFontSize, setSocialFontSize] = useState(20);
   const [socialOffsetX, setSocialOffsetX] = useState(0);
   const [socialOffsetY, setSocialOffsetY] = useState(0);
-  const [socialAlign, setSocialAlign] = useState<TitleAlign>('left');
+  const [socialAlign, setSocialAlign] = useState<TitleAlign>('center');
   const [socialIconImages, setSocialIconImages] = useState<Partial<Record<SocialPlatformKey, HTMLImageElement>>>({});
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewKind, setPreviewKind] = useState<PreviewKind | null>(null);
@@ -3298,10 +3298,10 @@ export default function GeradorCardPage() {
                       type="button"
                       onClick={() => {
                         setSocialFont('montserrat-semibold');
-                        setSocialFontSize(28);
+                        setSocialFontSize(20);
                         setSocialOffsetX(0);
                         setSocialOffsetY(0);
-                        setSocialAlign('left');
+                        setSocialAlign('center');
                       }}
                       className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:border-[#991B1B] hover:text-[#991B1B]"
                     >
