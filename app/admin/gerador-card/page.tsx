@@ -887,7 +887,7 @@ function drawTemplate(
   const verticalShift = canvasHeight - CANVAS_HEIGHT;
   // No formato 9:16 reservamos áreas seguras para a interface do Reels/TikTok.
   const topInset = verticalShift > 0 ? 170 : 0;
-  const bottomInset = verticalShift > 0 ? 300 : 0;
+  const bottomInset = verticalShift > 0 ? 150 : 0;
   context.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
   const isUrgentTemplate = template === 'urgente';
   const titleFontFamily = getFontFamily(titleFont);
@@ -1147,7 +1147,7 @@ function drawMemorialTemplate(
   const canvasHeight = context.canvas.height;
   const verticalShift = canvasHeight - CANVAS_HEIGHT;
   const topInset = verticalShift > 0 ? 130 : 0;
-  const bottomInset = verticalShift > 0 ? 260 : 0;
+  const bottomInset = verticalShift > 0 ? 170 : 0;
   context.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
   const titleFontFamily = getFontFamily(titleFont);
   const fontStyleParts = getEffectiveFontStyleParts(titleFont, titleFontStyle);
