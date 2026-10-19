@@ -1247,7 +1247,7 @@ export default function GeradorCardPage() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
   const [contentFormat, setContentFormat] = useState<ContentFormat>('post');
   const canvasHeight = contentFormat === 'vertical' ? VERTICAL_CANVAS_HEIGHT : CANVAS_HEIGHT;
-  const [titleFont, setTitleFont] = useState<TitleFont>('arial');
+  const [titleFont, setTitleFont] = useState<TitleFont>('montserrat-bold');
   const [titleFontStyle, setTitleFontStyle] = useState<TitleFontStyle>('bold');
   const [titleAlign, setTitleAlign] = useState<TitleAlign>('left');
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('right');
@@ -1259,7 +1259,7 @@ export default function GeradorCardPage() {
   const [columnTitleOffsetY, setColumnTitleOffsetY] = useState(0);
   const [columnAccentOffsetX, setColumnAccentOffsetX] = useState(0);
   const [columnAccentOffsetY, setColumnAccentOffsetY] = useState(0);
-  const [introAnimation, setIntroAnimation] = useState<IntroAnimation>('fade-up');
+  const [introAnimation, setIntroAnimation] = useState<IntroAnimation>('slide-left');
   const [headerTheme, setHeaderTheme] = useState<HeaderTheme>('black');
   const [footerGradient, setFooterGradient] = useState<FooterGradient>('dark');
   const [imageScale, setImageScale] = useState(1);
