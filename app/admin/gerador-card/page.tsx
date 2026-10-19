@@ -37,6 +37,7 @@ const MONTSERRAT_FONT_FAMILY = montserrat.style.fontFamily;
 type CardTemplate = 'editorial' | 'urgente' | 'clean';
 type CardKind = 'news' | 'column' | 'memorial';
 type ExportFormat = 'png' | 'jpeg';
+type ContentFormat = 'post' | 'vertical';
 type HeaderTheme = 'black' | 'white';
 type FooterGradient = 'dark' | 'light';
 type LogoPosition = 'left' | 'center' | 'right';
@@ -116,6 +117,7 @@ type WrappedText = {
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1350;
+const VERTICAL_CANVAS_HEIGHT = 1920;
 const CARD_LOGO_SRC = '/rbn-card-logo.png';
 const CARD_ACCENT_RED = '#C1121F';
 const VIDEO_EXPORT_EXTENSION = 'webm';
@@ -881,7 +883,12 @@ function drawTemplate(
   socialOffsetY: number,
   socialAlign: TitleAlign
 ) {
-  context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const canvasHeight = context.canvas.height;
+  const verticalShift = canvasHeight - CANVAS_HEIGHT;
+  // No formato 9:16 reservamos áreas seguras para a interface do Reels/TikTok.
+  const topInset = verticalShift > 0 ? 170 : 0;
+  const bottomInset = verticalShift > 0 ? 300 : 0;
+  context.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
   const isUrgentTemplate = template === 'urgente';
   const titleFontFamily = getFontFamily(titleFont);
   const fontStyleParts = getEffectiveFontStyleParts(titleFont, titleFontStyle);
@@ -899,7 +906,7 @@ function drawTemplate(
     0,
     0,
     CANVAS_WIDTH,
-    CANVAS_HEIGHT,
+    canvasHeight,
     imageScale,
     imageOffsetX,
     imageOffsetY
@@ -908,7 +915,7 @@ function drawTemplate(
     context.filter = 'none';
   }
 
-  const bottomGradient = context.createLinearGradient(0, CANVAS_HEIGHT - 520, 0, CANVAS_HEIGHT);
+  const bottomGradient = context.createLinearGradient(0, canvasHeight - 520 - bottomInset, 0, canvasHeight);
   if (footerGradient === 'light') {
     bottomGradient.addColorStop(0, 'rgba(255,255,255,0)');
     bottomGradient.addColorStop(0.34, 'rgba(255,255,255,0.62)');
@@ -919,11 +926,11 @@ function drawTemplate(
     bottomGradient.addColorStop(1, 'rgba(0,0,0,0.95)');
   }
   context.fillStyle = bottomGradient;
-  context.fillRect(0, CANVAS_HEIGHT - 520, CANVAS_WIDTH, 520);
+  context.fillRect(0, canvasHeight - 520 - bottomInset, CANVAS_WIDTH, 520 + bottomInset);
 
   if (template === 'clean') {
     context.fillStyle = 'rgba(255,255,255,0.08)';
-    context.fillRect(40, 40, CANVAS_WIDTH - 80, CANVAS_HEIGHT - 80);
+    context.fillRect(40, 40, CANVAS_WIDTH - 80, canvasHeight - 80);
   }
 
   if (logoImage) {
@@ -949,7 +956,7 @@ function drawTemplate(
           : CANVAS_WIDTH - logoWidth - 44;
     const logoX = Math.max(12, Math.min(CANVAS_WIDTH - logoWidth - 12, baseLogoX + logoOffsetX));
 
-    const logoY = Math.max(12, 38 + logoOffsetY);
+    const logoY = Math.max(12, 38 + topInset + logoOffsetY);
     context.drawImage(preparedLogo, logoX, logoY, logoWidth, logoHeight);
   }
 
@@ -958,7 +965,7 @@ function drawTemplate(
   context.translate(introFrameStyle.translateX, introFrameStyle.translateY);
   context.scale(introFrameStyle.scale, introFrameStyle.scale);
   const categoryX = 72;
-  const categoryY = template === 'clean' ? 860 : 900;
+  const categoryY = (template === 'clean' ? 860 : 900) + verticalShift - bottomInset;
   let titleStartY = categoryY + 68;
 
   if (showCategory) {
@@ -1001,7 +1008,7 @@ function drawTemplate(
     const socialBottomMargin = socialBadgeSize + 24;
     const socialStartY = Math.min(
       titleStartY + wrappedTitle.lines.length * wrappedTitle.lineHeight + 36 + socialOffsetY,
-      CANVAS_HEIGHT - socialBottomMargin
+      canvasHeight - bottomInset - socialBottomMargin
     );
     drawSocialLinksRow(
       context,
@@ -1045,8 +1052,13 @@ function drawColumnTemplate(
   accentOffsetX: number,
   accentOffsetY: number
 ) {
+  const canvasHeight = context.canvas.height;
+  const verticalShift = canvasHeight - CANVAS_HEIGHT;
+  // Em 9:16 a imagem cresce e o bloco do título sobe para fora da área do Reels/TikTok.
+  const shift = verticalShift > 0 ? verticalShift - 220 : 0;
+  const topInset = verticalShift > 0 ? 120 : 0;
   context.fillStyle = '#FFFFFF';
-  context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  context.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
   if (logoImage) {
     const preparedLogoSource = makeNearBlackTransparent(logoImage);
     const preparedLogo =
@@ -1061,10 +1073,10 @@ function drawColumnTemplate(
       logoWidth = logoHeight * logoRatio;
     }
     const logoX = Math.max(12, Math.min(CANVAS_WIDTH - logoWidth - 12, 58 + logoOffsetX));
-    const logoY = Math.max(12, 26 + logoOffsetY);
+    const logoY = Math.max(12, 26 + topInset + logoOffsetY);
     context.drawImage(preparedLogo, logoX, logoY, logoWidth, logoHeight);
   }
-  const categoryY = 166;
+  const categoryY = 166 + topInset;
   context.fillStyle = CARD_ACCENT_RED;
   context.font = '800 26px Arial, sans-serif';
   context.fillText('COLUNAS', 58, categoryY);
@@ -1074,7 +1086,7 @@ function drawColumnTemplate(
   context.font = '700 34px Georgia, Times New Roman, serif';
   context.fillText(columnistName || 'Colunista RBN', 58, categoryY + 54);
   const avatarX = CANVAS_WIDTH - 218;
-  const avatarY = 58;
+  const avatarY = 58 + topInset;
   context.save();
   context.beginPath();
   context.arc(avatarX + 82, avatarY + 82, 82, 0, Math.PI * 2);
@@ -1094,9 +1106,9 @@ function drawColumnTemplate(
   context.beginPath();
   context.arc(avatarX + 82, avatarY + 82, 82, 0, Math.PI * 2);
   context.stroke();
-  drawCoverImage(context, heroMedia, heroMediaWidth, heroMediaHeight, 0, 300, CANVAS_WIDTH, 680, imageScale, imageOffsetX, imageOffsetY);
+  drawCoverImage(context, heroMedia, heroMediaWidth, heroMediaHeight, 0, 300 + topInset, CANVAS_WIDTH, 680 + shift - topInset, imageScale, imageOffsetX, imageOffsetY);
   context.fillStyle = '#FFFFFF';
-  context.fillRect(0, 980, CANVAS_WIDTH, 370);
+  context.fillRect(0, 980 + shift, CANVAS_WIDTH, canvasHeight - 980 - shift);
   const titleStyle = getEffectiveFontStyleParts(titleFont, titleFontStyle);
   const titleFontSize = Math.max(24, Math.min(120, titleSize));
   context.font = `${titleStyle.fontStyle} ${titleStyle.fontWeight} ${titleFontSize}px ${titleFontFamily}`;
@@ -1104,11 +1116,11 @@ function drawColumnTemplate(
   context.fillStyle = '#1F2937';
   context.font = `${titleStyle.fontStyle} ${titleStyle.fontWeight} ${titleFontSize}px ${titleFontFamily}`;
   const titleX = Math.max(24, Math.min(CANVAS_WIDTH - 70, 58 + titleOffsetX));
-  const titleY = Math.max(1010, Math.min(1320, 1080 + titleOffsetY));
+  const titleY = Math.max(1010 + shift, Math.min(1320 + shift, 1080 + shift + titleOffsetY));
   wrappedTitle.lines.forEach((line, index) => context.fillText(line, titleX, titleY + index * wrappedTitle.lineHeight));
   context.fillStyle = CARD_ACCENT_RED;
   const accentX = Math.max(12, Math.min(CANVAS_WIDTH - 132, titleX + accentOffsetX));
-  const accentY = Math.max(990, Math.min(1338, titleY - wrappedTitle.lineHeight - 18 + accentOffsetY));
+  const accentY = Math.max(990 + shift, Math.min(1338 + shift, titleY - wrappedTitle.lineHeight - 18 + accentOffsetY));
   context.fillRect(accentX, accentY, 120, 6);
 }
 
@@ -1132,7 +1144,11 @@ function drawMemorialTemplate(
   imageOffsetX: number,
   imageOffsetY: number
 ) {
-  context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  const canvasHeight = context.canvas.height;
+  const verticalShift = canvasHeight - CANVAS_HEIGHT;
+  const topInset = verticalShift > 0 ? 130 : 0;
+  const bottomInset = verticalShift > 0 ? 260 : 0;
+  context.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
   const titleFontFamily = getFontFamily(titleFont);
   const fontStyleParts = getEffectiveFontStyleParts(titleFont, titleFontStyle);
 
@@ -1149,19 +1165,19 @@ function drawMemorialTemplate(
     0,
     0,
     CANVAS_WIDTH,
-    CANVAS_HEIGHT,
+    canvasHeight,
     imageScale,
     imageOffsetX,
     imageOffsetY
   );
   context.restore();
 
-  const overlayGradient = context.createLinearGradient(0, 0, 0, CANVAS_HEIGHT);
+  const overlayGradient = context.createLinearGradient(0, 0, 0, canvasHeight);
   overlayGradient.addColorStop(0, 'rgba(5,5,5,0.78)');
   overlayGradient.addColorStop(0.38, 'rgba(8,8,8,0.34)');
   overlayGradient.addColorStop(1, 'rgba(0,0,0,0.9)');
   context.fillStyle = overlayGradient;
-  context.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  context.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
 
   if (logoImage) {
     const preparedLogo = makeNearBlackTransparent(logoImage);
@@ -1185,7 +1201,7 @@ function drawMemorialTemplate(
           ? (CANVAS_WIDTH - logoWidth) / 2
           : CANVAS_WIDTH - logoWidth - 44;
     const logoX = Math.max(12, Math.min(CANVAS_WIDTH - logoWidth - 12, baseLogoX + logoOffsetX));
-    const logoY = Math.max(12, 76 + logoOffsetY);
+    const logoY = Math.max(12, 76 + topInset + logoOffsetY);
     context.drawImage(preparedLogo, logoX, logoY, logoWidth, logoHeight);
   }
 
@@ -1197,7 +1213,7 @@ function drawMemorialTemplate(
   const wrappedName = wrapText(context, normalizedName, CANVAS_WIDTH - 180, 260, titleFontFamily, titleFontStyle, undefined, titleFont);
   context.fillStyle = '#FFFFFF';
   context.font = `${fontStyleParts.fontStyle} ${fontStyleParts.fontWeight} ${wrappedName.fontSize}px ${titleFontFamily}`;
-  const nameStartY = 920;
+  const nameStartY = 920 + verticalShift - bottomInset;
 
   wrappedName.lines.forEach((line, index) => {
     context.fillText(line, CANVAS_WIDTH / 2, nameStartY + index * wrappedName.lineHeight);
@@ -1210,7 +1226,7 @@ function drawMemorialTemplate(
 
   context.fillStyle = '#FFFFFF';
   context.font = '500 36px Georgia, Times New Roman, serif';
-  context.fillText(yearsLine, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 110);
+  context.fillText(yearsLine, CANVAS_WIDTH / 2, canvasHeight - 110 - bottomInset);
   context.textAlign = 'start';
 }
 
@@ -1229,6 +1245,8 @@ export default function GeradorCardPage() {
   const [memorialDeathDate, setMemorialDeathDate] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<CardTemplate>('editorial');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
+  const [contentFormat, setContentFormat] = useState<ContentFormat>('post');
+  const canvasHeight = contentFormat === 'vertical' ? VERTICAL_CANVAS_HEIGHT : CANVAS_HEIGHT;
   const [titleFont, setTitleFont] = useState<TitleFont>('arial');
   const [titleFontStyle, setTitleFontStyle] = useState<TitleFontStyle>('bold');
   const [titleAlign, setTitleAlign] = useState<TitleAlign>('left');
@@ -1924,7 +1942,7 @@ export default function GeradorCardPage() {
     await ensureCardFontsLoaded();
     const canvas = document.createElement('canvas');
     canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    canvas.height = canvasHeight;
     const context = canvas.getContext('2d');
 
     if (!context) {
@@ -1954,7 +1972,7 @@ export default function GeradorCardPage() {
     const mimeType = isMemorialCard ? 'image/png' : exportFormat === 'png' ? 'image/png' : 'image/jpeg';
     const quality = isMemorialCard || exportFormat === 'png' ? undefined : 0.96;
     return canvas.toDataURL(mimeType, quality);
-  }, [currentImageSource, customVideoUrl, drawCurrentFrame, effectiveVideoTrim.startTime, exportFormat, isColumnCard, isMemorialCard, isVideoSource, selectedColumnist]);
+  }, [canvasHeight, currentImageSource, customVideoUrl, drawCurrentFrame, effectiveVideoTrim.startTime, exportFormat, isColumnCard, isMemorialCard, isVideoSource, selectedColumnist]);
 
   const generateVideoPreview = useCallback(async () => {
     if (!customVideoUrl || !selectedArticle) {
@@ -1974,7 +1992,7 @@ export default function GeradorCardPage() {
     ]);
     const canvas = document.createElement('canvas');
     canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    canvas.height = canvasHeight;
     const context = canvas.getContext('2d');
 
     if (!context) {
@@ -2073,7 +2091,7 @@ export default function GeradorCardPage() {
             );
             drawCurrentFrame(context, heroVideo, heroVideo.videoWidth, heroVideo.videoHeight, maybeLogoImage, null, introProgress);
           } else {
-            context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            context.clearRect(0, 0, CANVAS_WIDTH, canvasHeight);
             drawCoverImage(
               context,
               heroVideo,
@@ -2082,7 +2100,7 @@ export default function GeradorCardPage() {
               0,
               0,
               CANVAS_WIDTH,
-              CANVAS_HEIGHT,
+              canvasHeight,
               imageScale,
               imageOffsetX,
               imageOffsetY
@@ -2111,6 +2129,7 @@ export default function GeradorCardPage() {
 
     return videoBlobPromise;
   }, [
+    canvasHeight,
     customVideoUrl,
     drawCurrentFrame,
     effectiveCardOverlayWindow.end,
@@ -2240,7 +2259,7 @@ export default function GeradorCardPage() {
 
     const link = document.createElement('a');
     link.href = previewUrl;
-    const newsFileBaseName = selectedArticle ? `rbn-card-${selectedArticle.id}` : isColumnCard ? `rbn-card-coluna-${selectedColumnist?.id ?? 'rbn'}` : 'rbn-card';
+    const newsFileBaseName = selectedArticle ? `rbn-card-${contentFormat === 'vertical' ? '9x16-' : ''}${selectedArticle.id}` : isColumnCard ? `rbn-card-coluna-${selectedColumnist?.id ?? 'rbn'}` : 'rbn-card';
     link.download = isVideoSource
       ? `${newsFileBaseName}.${VIDEO_EXPORT_EXTENSION}`
       : `${isMemorialCard ? 'rbn-card-luto' : newsFileBaseName}.${isMemorialCard || exportFormat === 'png' ? 'png' : 'jpg'}`;
@@ -2260,7 +2279,7 @@ export default function GeradorCardPage() {
               <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#991B1B]">Instagram</p>
               <h1 className="mt-2 text-3xl font-bold text-gray-900">Gerador de Card</h1>
               <p className="mt-2 max-w-3xl text-sm text-gray-600">
-                Selecione a matéria, ajuste o título, troque a mídia se quiser e gere uma arte 1080 x 1350 pronta para publicação, inclusive vídeo WEBM sem conversão para MP4.
+                Selecione a matéria, ajuste o título, troque a mídia se quiser e gere uma arte (post 1080 x 1350 ou vídeo vertical 1080 x 1920) pronta para publicação, inclusive vídeo WEBM sem conversão para MP4.
               </p>
             </div>
             <div className="rounded-2xl border border-[#991B1B]/15 bg-[#991B1B]/5 px-4 py-3 text-sm text-[#7F1D1D]">
@@ -2568,6 +2587,27 @@ export default function GeradorCardPage() {
                     </button>
                   </div>
                 )}
+
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-gray-800">Formato do conteúdo</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {([
+                      { value: 'post', title: 'Post para Instagram', detail: '4:5 — 1080 x 1350 px' },
+                      { value: 'vertical', title: 'Vídeo vertical 9:16', detail: '1080 x 1920 px — Reels e TikTok' },
+                    ] as const).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setContentFormat(option.value)}
+                        aria-pressed={contentFormat === option.value}
+                        className={`rounded-xl border px-4 py-3 text-left transition ${contentFormat === option.value ? 'border-[#991B1B] bg-[#991B1B]/5 ring-2 ring-[#991B1B]/10' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                      >
+                        <span className="block text-sm font-semibold text-gray-900">{option.title}</span>
+                        <span className="block text-xs text-gray-500">{option.detail}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -3683,7 +3723,7 @@ export default function GeradorCardPage() {
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">Prévia</h2>
                     <p className="text-sm text-gray-500">
-                      Formato 4:5 — 1080 x 1350 px. A prévia atualiza automaticamente enquanto voce edita
+                      {contentFormat === 'vertical' ? 'Formato 9:16 — 1080 x 1920 px (Reels e TikTok)' : 'Formato 4:5 — 1080 x 1350 px'}. A prévia atualiza automaticamente enquanto voce edita
                       {isVideoSource ? ', e o botão principal gera o vídeo completo.' : '.'}
                     </p>
                   </div>
