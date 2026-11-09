@@ -758,6 +758,23 @@ function cropTransparentImage(image: HTMLCanvasElement) {
   return croppedImage;
 }
 
+const preparedLogoCache = new WeakMap<HTMLImageElement, HTMLCanvasElement | HTMLImageElement>();
+
+function prepareCardLogo(image: HTMLImageElement) {
+  const cached = preparedLogoCache.get(image);
+  if (cached) {
+    return cached;
+  }
+
+  const transparentLogo = makeNearBlackTransparent(image);
+  const preparedLogo =
+    transparentLogo instanceof HTMLCanvasElement
+      ? cropTransparentImage(transparentLogo)
+      : transparentLogo;
+  preparedLogoCache.set(image, preparedLogo);
+  return preparedLogo;
+}
+
 function drawTemplate(
   context: CanvasRenderingContext2D,
   title: string,
@@ -918,7 +935,7 @@ function drawTemplate(
   }
 
   if (logoImage) {
-    const preparedLogo = makeNearBlackTransparent(logoImage);
+    const preparedLogo = prepareCardLogo(logoImage);
     const sourceWidth = 'naturalWidth' in preparedLogo ? preparedLogo.naturalWidth : preparedLogo.width;
     const sourceHeight = 'naturalHeight' in preparedLogo ? preparedLogo.naturalHeight : preparedLogo.height;
     const maxLogoWidth = 360 * (logoSize / 100);
@@ -1041,7 +1058,7 @@ function drawSocialClipTemplate(
   const mediaY = textPanelHeight;
   const textPaddingX = 72;
   const textPaddingY = Math.round(textPanelHeight * 0.27);
-  const logoWidth = Math.min(210 * (logoSize / 100), width * 0.24);
+  const logoWidth = Math.min(210 * (logoSize / 100), width * 0.34);
   const logoY = Math.round(textPanelHeight * 0.07);
   const titleTop = logoY + 105;
   const wrappedTitle = wrapText(
@@ -1066,14 +1083,15 @@ function drawSocialClipTemplate(
   context.fillRect(0, 0, width, height);
 
   if (logoImage) {
-    const logo = makeNearBlackTransparent(logoImage);
+    const logo = prepareCardLogo(logoImage);
     const sourceWidth = 'naturalWidth' in logo ? logo.naturalWidth : logo.width;
     const sourceHeight = 'naturalHeight' in logo ? logo.naturalHeight : logo.height;
     const logoRatio = sourceWidth / sourceHeight;
-    let measuredWidth = Math.min(logoWidth, 240);
+    let measuredWidth = Math.min(logoWidth, width * 0.34);
     let measuredHeight = measuredWidth / logoRatio;
-    if (measuredHeight > 75) {
-      measuredHeight = 75;
+    const maxLogoHeight = 75 * (logoSize / 100);
+    if (measuredHeight > maxLogoHeight) {
+      measuredHeight = maxLogoHeight;
       measuredWidth = measuredHeight * logoRatio;
     }
     context.drawImage(logo, width - measuredWidth - textPaddingX, logoY, measuredWidth, measuredHeight);
@@ -1198,10 +1216,10 @@ function drawSocialOverlayTemplate(
   context.fillRect(0, 0, width, height);
 
   if (logoImage) {
-    const logo = makeNearBlackTransparent(logoImage);
+    const logo = prepareCardLogo(logoImage);
     const sourceWidth = 'naturalWidth' in logo ? logo.naturalWidth : logo.width;
     const sourceHeight = 'naturalHeight' in logo ? logo.naturalHeight : logo.height;
-    const logoWidth = Math.min(210 * (logoSize / 100), width * 0.24);
+    const logoWidth = Math.min(210 * (logoSize / 100), width * 0.34);
     const logoHeight = logoWidth / (sourceWidth / sourceHeight);
     context.drawImage(logo, width - logoWidth - 68, isVertical ? 150 : 90, logoWidth, logoHeight);
   }
@@ -1290,16 +1308,15 @@ function drawColumnTemplate(
   context.fillStyle = '#FFFFFF';
   context.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
   if (logoImage) {
-    const preparedLogoSource = makeNearBlackTransparent(logoImage);
-    const preparedLogo =
-      preparedLogoSource instanceof HTMLCanvasElement
-        ? cropTransparentImage(preparedLogoSource)
-        : preparedLogoSource;
-    const logoRatio = preparedLogo.width / preparedLogo.height;
-    let logoWidth = Math.min(190 * (logoSize / 100), 230);
+    const preparedLogo = prepareCardLogo(logoImage);
+    const logoSourceWidth = 'naturalWidth' in preparedLogo ? preparedLogo.naturalWidth : preparedLogo.width;
+    const logoSourceHeight = 'naturalHeight' in preparedLogo ? preparedLogo.naturalHeight : preparedLogo.height;
+    const logoRatio = logoSourceWidth / logoSourceHeight;
+    let logoWidth = Math.min(190 * (logoSize / 100), 380);
     let logoHeight = logoWidth / logoRatio;
-    if (logoHeight > 72) {
-      logoHeight = 72;
+    const maxLogoHeight = 72 * (logoSize / 100);
+    if (logoHeight > maxLogoHeight) {
+      logoHeight = maxLogoHeight;
       logoWidth = logoHeight * logoRatio;
     }
     const logoX = Math.max(12, Math.min(CANVAS_WIDTH - logoWidth - 12, 58 + logoOffsetX));
@@ -1411,7 +1428,7 @@ function drawMemorialTemplate(
   context.fillRect(0, 0, CANVAS_WIDTH, canvasHeight);
 
   if (logoImage) {
-    const preparedLogo = makeNearBlackTransparent(logoImage);
+    const preparedLogo = prepareCardLogo(logoImage);
     const sourceWidth = 'naturalWidth' in preparedLogo ? preparedLogo.naturalWidth : preparedLogo.width;
     const sourceHeight = 'naturalHeight' in preparedLogo ? preparedLogo.naturalHeight : preparedLogo.height;
     const maxLogoWidth = 400 * (logoSize / 100);
