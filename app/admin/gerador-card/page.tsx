@@ -79,6 +79,7 @@ type CardGeneratorPreset = {
     exportFormat: ExportFormat;
     titleFont: TitleFont;
     titleFontStyle: TitleFontStyle;
+    titleFontSize?: number;
     titleAlign?: TitleAlign;
     logoPosition: LogoPosition;
     introAnimation: IntroAnimation;
@@ -594,7 +595,8 @@ function wrapText(
   fontFamily: string,
   fontStyle: TitleFontStyle,
   preferredFontSize?: number,
-  font?: TitleFont
+  font?: TitleFont,
+  fitToArea = false
 ) {
   const normalizedText = text.replace(/\s+/g, ' ').trim();
   const words = normalizedText.split(' ').filter(Boolean);
@@ -603,7 +605,7 @@ function wrapText(
   const maxFontSize = typeof preferredFontSize === 'number'
     ? Math.max(24, Math.min(120, preferredFontSize))
     : 82;
-  const minFontSize = typeof preferredFontSize === 'number' ? maxFontSize : 42;
+  const minFontSize = typeof preferredFontSize === 'number' ? (fitToArea ? 24 : maxFontSize) : 42;
   for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= 2) {
     context.font = `${fontStyleParts.fontStyle} ${fontStyleParts.fontWeight} ${fontSize}px ${fontFamily}`;
     const lineHeight = Math.round(fontSize * 1.12);
@@ -874,6 +876,7 @@ function drawTemplate(
   categoryTitleGap: number,
   titleFont: TitleFont,
   titleFontStyle: TitleFontStyle,
+  titleFontSize: number,
   titleAlign: TitleAlign,
   introAnimation: IntroAnimation,
   animationProgress: number,
@@ -896,10 +899,18 @@ function drawTemplate(
       imageScale,
       imageOffsetX,
       imageOffsetY,
+      logoImage,
+      logoSize,
       getFontFamily(titleFont),
       titleFont,
       titleFontStyle,
-      titleAlign
+      titleFontSize,
+      titleAlign,
+      socialBadges,
+      socialIconImages,
+      socialFont,
+      socialFontSize,
+      socialAlign
     );
     return;
   }
@@ -929,6 +940,7 @@ function drawTemplate(
       categoryTitleGap,
       titleFont,
       titleFontStyle,
+      titleFontSize,
       titleAlign,
       introAnimation,
       animationProgress,
@@ -1047,7 +1059,7 @@ function drawTemplate(
     titleStartY = categoryY + categoryHeight + categoryTitleGap;
   }
 
-  const wrappedTitle = wrapText(context, title, CANVAS_WIDTH - 144, 320, titleFontFamily, titleFontStyle, undefined, titleFont);
+  const wrappedTitle = wrapText(context, title, CANVAS_WIDTH - 144, 320, titleFontFamily, titleFontStyle, titleFontSize, titleFont, true);
   context.fillStyle = footerGradient === 'light' ? '#111111' : '#FFFFFF';
   context.font = `${fontStyleParts.fontStyle} ${fontStyleParts.fontWeight} ${wrappedTitle.fontSize}px ${titleFontFamily}`;
 
@@ -1095,37 +1107,64 @@ function drawSocialClipTemplate(
   imageScale: number,
   imageOffsetX: number,
   imageOffsetY: number,
+  logoImage: HTMLImageElement | null,
+  logoSize: number,
   titleFontFamily: string,
   titleFont: TitleFont,
   titleFontStyle: TitleFontStyle,
-  titleAlign: TitleAlign
+  titleFontSize: number,
+  titleAlign: TitleAlign,
+  socialBadges: SocialBadgeEntry[],
+  socialIconImages: Partial<Record<SocialPlatformKey, HTMLImageElement>>,
+  socialFont: TitleFont,
+  socialFontSize: number,
+  socialAlign: TitleAlign
 ) {
   const width = context.canvas.width;
   const height = context.canvas.height;
-  const textPanelHeight = Math.round(height * 0.42);
-  const mediaHeight = Math.round(height * 0.52);
+  const textPanelHeight = Math.round(height * 0.38);
+  const mediaHeight = Math.round(height * 0.5);
+  const footerHeight = height - textPanelHeight - mediaHeight;
   const mediaY = textPanelHeight;
   const textPaddingX = 72;
-  const textPaddingY = Math.round(textPanelHeight * 0.1);
+  const textPaddingY = Math.round(textPanelHeight * 0.27);
+  const logoWidth = Math.min(210 * (logoSize / 100), width * 0.24);
+  const logoY = Math.round(textPanelHeight * 0.07);
+  const titleTop = logoY + 105;
   const wrappedTitle = wrapText(
     context,
     title,
     width - textPaddingX * 2,
-    textPanelHeight - textPaddingY * 2,
+    textPanelHeight - titleTop - textPaddingY,
     titleFontFamily,
     titleFontStyle,
-    undefined,
-    titleFont
+    titleFontSize,
+    titleFont,
+    true
   );
   const style = getEffectiveFontStyleParts(titleFont, titleFontStyle);
   const textAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
   const textX = titleAlign === 'center' ? width / 2 : titleAlign === 'right' ? width - textPaddingX : textPaddingX;
   const textHeight = wrappedTitle.lines.length * wrappedTitle.lineHeight;
-  const firstLineY = textPaddingY + (textPanelHeight - textPaddingY * 2 - textHeight) / 2 + wrappedTitle.fontSize;
+  const firstLineY = titleTop + (textPanelHeight - titleTop - textPaddingY - textHeight) / 2 + wrappedTitle.fontSize;
 
   context.clearRect(0, 0, width, height);
   context.fillStyle = '#FFFFFF';
   context.fillRect(0, 0, width, height);
+
+  if (logoImage) {
+    const logo = makeNearBlackTransparent(logoImage);
+    const sourceWidth = 'naturalWidth' in logo ? logo.naturalWidth : logo.width;
+    const sourceHeight = 'naturalHeight' in logo ? logo.naturalHeight : logo.height;
+    const logoRatio = sourceWidth / sourceHeight;
+    let measuredWidth = Math.min(logoWidth, 240);
+    let measuredHeight = measuredWidth / logoRatio;
+    if (measuredHeight > 75) {
+      measuredHeight = 75;
+      measuredWidth = measuredHeight * logoRatio;
+    }
+    context.drawImage(logo, width - measuredWidth - textPaddingX, logoY, measuredWidth, measuredHeight);
+  }
 
   context.fillStyle = '#111111';
   context.font = `${style.fontStyle} ${style.fontWeight} ${wrappedTitle.fontSize}px ${titleFontFamily}`;
@@ -1153,6 +1192,21 @@ function drawSocialClipTemplate(
     imageOffsetY
   );
   context.restore();
+
+  if (socialBadges.length > 0) {
+    drawSocialLinksRow(
+      context,
+      socialBadges,
+      socialIconImages,
+      textPaddingX,
+      mediaY + mediaHeight + Math.max(12, (footerHeight - 42) / 2),
+      width - textPaddingX * 2,
+      '#111111',
+      getFontFamily(socialFont),
+      socialFontSize,
+      socialAlign
+    );
+  }
 }
 
 function drawSocialOverlayTemplate(
@@ -1180,6 +1234,7 @@ function drawSocialOverlayTemplate(
   categoryTitleGap: number,
   titleFont: TitleFont,
   titleFontStyle: TitleFontStyle,
+  titleFontSize: number,
   titleAlign: TitleAlign,
   introAnimation: IntroAnimation,
   animationProgress: number,
@@ -1212,8 +1267,9 @@ function drawSocialOverlayTemplate(
     titleMaxHeight,
     titleFontFamily,
     titleFontStyle,
-    undefined,
-    titleFont
+    titleFontSize,
+    titleFont,
+    true
   );
   const titleStartY = categoryY + categoryHeight + categoryTitleGap + wrappedTitle.fontSize;
   const titleAlignX = titleAlign === 'center' ? width / 2 : titleAlign === 'right' ? width - sidePadding : sidePadding;
@@ -1401,6 +1457,7 @@ function drawMemorialTemplate(
   deathDate: string,
   titleFont: TitleFont,
   titleFontStyle: TitleFontStyle,
+  titleFontSize: number,
   imageScale: number,
   imageOffsetX: number,
   imageOffsetY: number
@@ -1471,7 +1528,7 @@ function drawMemorialTemplate(
   const normalizedProfession = profession.trim().toUpperCase();
   const yearsLine = formatMemorialYears(birthDate, deathDate);
 
-  const wrappedName = wrapText(context, normalizedName, CANVAS_WIDTH - 180, 260, titleFontFamily, titleFontStyle, undefined, titleFont);
+  const wrappedName = wrapText(context, normalizedName, CANVAS_WIDTH - 180, 260, titleFontFamily, titleFontStyle, titleFontSize, titleFont, true);
   context.fillStyle = '#FFFFFF';
   context.font = `${fontStyleParts.fontStyle} ${fontStyleParts.fontWeight} ${wrappedName.fontSize}px ${titleFontFamily}`;
   const nameStartY = 920 + verticalShift - bottomInset;
@@ -1510,6 +1567,7 @@ export default function GeradorCardPage() {
   const canvasHeight = contentFormat === 'vertical' ? VERTICAL_CANVAS_HEIGHT : CANVAS_HEIGHT;
   const [titleFont, setTitleFont] = useState<TitleFont>('montserrat-bold');
   const [titleFontStyle, setTitleFontStyle] = useState<TitleFontStyle>('bold');
+  const [titleFontSize, setTitleFontSize] = useState(82);
   const [titleAlign, setTitleAlign] = useState<TitleAlign>('left');
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('right');
   const [logoSize, setLogoSize] = useState(100);
@@ -1788,6 +1846,7 @@ export default function GeradorCardPage() {
       exportFormat,
       titleFont,
       titleFontStyle,
+      titleFontSize,
       titleAlign,
       logoPosition,
       logoSize,
@@ -1822,6 +1881,7 @@ export default function GeradorCardPage() {
       exportFormat,
       titleFont,
       titleFontStyle,
+      titleFontSize,
       titleAlign,
       logoPosition,
       logoSize,
@@ -1867,6 +1927,7 @@ export default function GeradorCardPage() {
     setExportFormat(preset.config.exportFormat);
     setTitleFont(preset.config.titleFont);
     setTitleFontStyle(preset.config.titleFontStyle);
+    setTitleFontSize(typeof preset.config.titleFontSize === 'number' && Number.isFinite(preset.config.titleFontSize) ? preset.config.titleFontSize : 82);
     setTitleAlign(preset.config.titleAlign ?? 'left');
     setLogoPosition(preset.config.logoPosition);
     setLogoSize(typeof preset.config.logoSize === 'number' && Number.isFinite(preset.config.logoSize) ? preset.config.logoSize : 100);
@@ -2069,6 +2130,7 @@ export default function GeradorCardPage() {
           memorialDeathDate,
           titleFont,
           titleFontStyle,
+          titleFontSize,
           imageScale,
           imageOffsetX,
           imageOffsetY
@@ -2136,6 +2198,7 @@ export default function GeradorCardPage() {
         categoryTitleGap,
         titleFont,
         titleFontStyle,
+        titleFontSize,
         titleAlign,
         introAnimation,
         animationProgress,
@@ -2195,6 +2258,7 @@ export default function GeradorCardPage() {
       socialAlign,
       titleFont,
       titleFontStyle,
+      titleFontSize,
       titleAlign,
     ]
   );
@@ -2939,6 +3003,21 @@ export default function GeradorCardPage() {
                       </select>
                     </div>
                   </div>
+                  {!isColumnCard && (
+                    <label className="block space-y-2 text-sm font-semibold text-gray-800">
+                      {isMemorialCard ? 'Tamanho do nome' : 'Tamanho da manchete'}
+                      <input
+                        type="range"
+                        min="24"
+                        max="120"
+                        step="2"
+                        value={titleFontSize}
+                        onChange={(event) => setTitleFontSize(Number(event.target.value))}
+                        className="w-full accent-[#991B1B]"
+                      />
+                      <span className="block text-xs font-normal text-gray-500">{titleFontSize}px</span>
+                    </label>
+                  )}
                   {isNewsCard && (
                     <div className="space-y-2">
                       <label className="text-sm font-semibold text-gray-800">Alinhamento da manchete</label>
