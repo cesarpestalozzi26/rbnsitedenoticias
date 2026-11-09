@@ -34,7 +34,7 @@ const montserrat = Montserrat({
 });
 const MONTSERRAT_FONT_FAMILY = montserrat.style.fontFamily;
 
-type CardTemplate = 'editorial' | 'urgente' | 'clean' | 'social-clip';
+type CardTemplate = 'editorial' | 'urgente' | 'clean' | 'social-clip' | 'social-overlay';
 type CardKind = 'news' | 'column' | 'memorial';
 type ExportFormat = 'png' | 'jpeg';
 type ContentFormat = 'post' | 'vertical';
@@ -218,6 +218,7 @@ const templateOptions: Array<{
   { id: 'urgente', name: 'Urgente', description: 'Imagem de fundo em preto e branco.' },
   { id: 'clean', name: 'Clean', description: 'Leitura limpa, com composição elegante e minimalista.' },
   { id: 'social-clip', name: 'Texto + vídeo', description: 'Manchete em fundo branco acima da foto ou do vídeo, como nas referências.' },
+  { id: 'social-overlay', name: 'Vídeo RBN vertical', description: 'Mídia em tela cheia, logo no alto e categoria/manchete na parte inferior.' },
 ];
 
 const fontOptions: Array<{ id: TitleFont; label: string; family: string; weight?: number }> = [
@@ -902,6 +903,45 @@ function drawTemplate(
     );
     return;
   }
+  if (template === 'social-overlay') {
+    drawSocialOverlayTemplate(
+      context,
+      title,
+      categoryLabel,
+      showCategory,
+      heroMedia,
+      heroMediaWidth,
+      heroMediaHeight,
+      logoImage,
+      logoSize,
+      imageScale,
+      imageOffsetX,
+      imageOffsetY,
+      isCategoryBackgroundTransparent,
+      categoryBackgroundColor,
+      categoryTextColor,
+      categoryBorderColor,
+      categoryFont,
+      categoryFontStyle,
+      categoryFontSize,
+      categoryPadding,
+      categoryBorderRadius,
+      categoryTitleGap,
+      titleFont,
+      titleFontStyle,
+      titleAlign,
+      introAnimation,
+      animationProgress,
+      socialBadges,
+      socialIconImages,
+      socialFont,
+      socialFontSize,
+      socialOffsetX,
+      socialOffsetY,
+      socialAlign
+    );
+    return;
+  }
 
   const verticalShift = canvasHeight - CANVAS_HEIGHT;
   // No formato 9:16 reservamos áreas seguras para a interface do Reels/TikTok.
@@ -1112,6 +1152,139 @@ function drawSocialClipTemplate(
     imageOffsetX,
     imageOffsetY
   );
+  context.restore();
+}
+
+function drawSocialOverlayTemplate(
+  context: CanvasRenderingContext2D,
+  title: string,
+  categoryLabel: string,
+  showCategory: boolean,
+  heroMedia: CanvasImageSource,
+  heroMediaWidth: number,
+  heroMediaHeight: number,
+  logoImage: HTMLImageElement | null,
+  logoSize: number,
+  imageScale: number,
+  imageOffsetX: number,
+  imageOffsetY: number,
+  isCategoryBackgroundTransparent: boolean,
+  categoryBackgroundColor: string,
+  categoryTextColor: string,
+  categoryBorderColor: string,
+  categoryFont: TitleFont,
+  categoryFontStyle: TitleFontStyle,
+  categoryFontSize: number,
+  categoryPadding: number,
+  categoryBorderRadius: number,
+  categoryTitleGap: number,
+  titleFont: TitleFont,
+  titleFontStyle: TitleFontStyle,
+  titleAlign: TitleAlign,
+  introAnimation: IntroAnimation,
+  animationProgress: number,
+  socialBadges: SocialBadgeEntry[],
+  socialIconImages: Partial<Record<SocialPlatformKey, HTMLImageElement>>,
+  socialFont: TitleFont,
+  socialFontSize: number,
+  socialOffsetX: number,
+  socialOffsetY: number,
+  socialAlign: TitleAlign
+) {
+  const width = context.canvas.width;
+  const height = context.canvas.height;
+  const isVertical = height > CANVAS_HEIGHT;
+  const sidePadding = isVertical ? 84 : 72;
+  const categorySize = Math.max(22, Math.min(60, categoryFontSize));
+  const categoryPaddingY = Math.max(12, Math.min(48, categoryPadding));
+  const categoryHeight = categorySize + categoryPaddingY;
+  const categoryY = height - (isVertical ? 610 : 430);
+  const intro = getIntroFrameStyle(introAnimation, animationProgress);
+  const titleFontFamily = getFontFamily(titleFont);
+  const titleStyle = getEffectiveFontStyleParts(titleFont, titleFontStyle);
+  const categoryFontFamily = getFontFamily(categoryFont);
+  const categoryStyle = getEffectiveFontStyleParts(categoryFont, categoryFontStyle);
+  const titleMaxHeight = isVertical ? 310 : 220;
+  const wrappedTitle = wrapText(
+    context,
+    title,
+    width - sidePadding * 2,
+    titleMaxHeight,
+    titleFontFamily,
+    titleFontStyle,
+    undefined,
+    titleFont
+  );
+  const titleStartY = categoryY + categoryHeight + categoryTitleGap + wrappedTitle.fontSize;
+  const titleAlignX = titleAlign === 'center' ? width / 2 : titleAlign === 'right' ? width - sidePadding : sidePadding;
+
+  context.clearRect(0, 0, width, height);
+  drawCoverImage(context, heroMedia, heroMediaWidth, heroMediaHeight, 0, 0, width, height, imageScale, imageOffsetX, imageOffsetY);
+
+  const shade = context.createLinearGradient(0, height * 0.42, 0, height);
+  shade.addColorStop(0, 'rgba(0,0,0,0)');
+  shade.addColorStop(0.35, 'rgba(0,0,0,0.22)');
+  shade.addColorStop(1, 'rgba(0,0,0,0.82)');
+  context.fillStyle = shade;
+  context.fillRect(0, 0, width, height);
+
+  if (logoImage) {
+    const logo = makeNearBlackTransparent(logoImage);
+    const sourceWidth = 'naturalWidth' in logo ? logo.naturalWidth : logo.width;
+    const sourceHeight = 'naturalHeight' in logo ? logo.naturalHeight : logo.height;
+    const logoWidth = Math.min(210 * (logoSize / 100), width * 0.24);
+    const logoHeight = logoWidth / (sourceWidth / sourceHeight);
+    context.drawImage(logo, width - logoWidth - 68, isVertical ? 150 : 90, logoWidth, logoHeight);
+  }
+
+  context.save();
+  context.globalAlpha = intro.alpha;
+  context.translate(intro.translateX, intro.translateY);
+  context.scale(intro.scale, intro.scale);
+
+  if (showCategory) {
+    context.font = `${categoryStyle.fontStyle} ${categoryStyle.fontWeight} ${categorySize}px ${categoryFontFamily}`;
+    const categoryWidth = Math.min(width - sidePadding * 2, context.measureText(categoryLabel.toUpperCase()).width + categoryPaddingY * 2);
+    const categoryX = (width - categoryWidth) / 2;
+    context.fillStyle = isCategoryBackgroundTransparent ? 'rgba(255,255,255,0)' : categoryBackgroundColor;
+    drawRoundedRect(context, categoryX, categoryY, categoryWidth, categoryHeight, categoryBorderRadius);
+    context.lineWidth = 3;
+    context.strokeStyle = categoryBorderColor;
+    context.stroke();
+    context.fillStyle = categoryTextColor;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(categoryLabel.toUpperCase(), width / 2, categoryY + categoryHeight / 2 + 1);
+    context.textAlign = 'start';
+    context.textBaseline = 'alphabetic';
+  }
+
+  context.fillStyle = '#FFFFFF';
+  context.font = `${titleStyle.fontStyle} ${titleStyle.fontWeight} ${wrappedTitle.fontSize}px ${titleFontFamily}`;
+  context.textAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
+  wrappedTitle.lines.forEach((line, index) => {
+    context.fillText(line, titleAlignX, titleStartY + index * wrappedTitle.lineHeight);
+  });
+  context.textAlign = 'start';
+
+  if (socialBadges.length > 0) {
+    drawSocialLinksRow(
+      context,
+      socialBadges,
+      socialIconImages,
+      sidePadding + socialOffsetX,
+      Math.min(
+        titleStartY + wrappedTitle.lines.length * wrappedTitle.lineHeight + 42 + socialOffsetY,
+        height - 100 - socialOffsetY
+      ),
+      width - sidePadding * 2,
+      '#FFFFFF',
+      getFontFamily(socialFont),
+      socialFontSize,
+      socialAlign
+    );
+  }
+
   context.restore();
 }
 
@@ -3824,9 +3997,11 @@ export default function GeradorCardPage() {
                         ? 'Modelo Editorial'
                         : selectedTemplate === 'urgente'
                           ? 'Modelo Urgente'
+                          : selectedTemplate === 'social-overlay'
+                            ? 'Vídeo RBN vertical'
                           : selectedTemplate === 'social-clip'
                             ? 'Texto + vídeo'
-                          : 'Modelo Clean'}
+                            : 'Modelo Clean'}
                   </div>
                 </div>
 
