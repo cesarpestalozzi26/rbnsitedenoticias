@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   }
   const response = NextResponse.json({
     ok: true,
+    sessionEstablished: !row.payload.mfaEnabled,
     user: {
       ...row.payload,
       id: row.id,

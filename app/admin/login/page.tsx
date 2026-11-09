@@ -107,6 +107,7 @@ export default function AdminLogin() {
 
     let user = null as ReturnType<typeof resolveUserByIdentifier>;
     let authenticatedRemotely = false;
+    let serverSessionEstablished = false;
     let remoteLoginUnavailable = false;
     try {
       const response = await fetch('/api/auth/admin-login', {
@@ -118,6 +119,7 @@ export default function AdminLogin() {
       if (response.ok && data.user) {
         user = data.user;
         authenticatedRemotely = true;
+        serverSessionEstablished = data.sessionEstablished === true;
       } else if (!response.ok && response.status >= 500) {
         remoteLoginUnavailable = true;
       }
@@ -171,9 +173,9 @@ export default function AdminLogin() {
       // Se nao conseguir verificar MFA, continua sem ele
     }
 
-    // O endpoint de login remoto já cria o cookie seguro para contas sem MFA.
-    // Só precisamos validar a sessão aqui quando o login usou o cache local.
-    if (!authenticatedRemotely && !(await establishSession(user.id, password))) {
+    // O login remoto já cria a sessão de contas sem MFA; os demais fluxos
+    // ainda precisam concluir a validação segura após a verificação de MFA.
+    if (!serverSessionEstablished && !(await establishSession(user.id, password))) {
       setError('Não foi possível iniciar uma sessão segura. Tente novamente.');
       setLoading(false);
       return;
