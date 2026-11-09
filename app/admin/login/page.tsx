@@ -171,7 +171,9 @@ export default function AdminLogin() {
       // Se nao conseguir verificar MFA, continua sem ele
     }
 
-    if (!(await establishSession(user.id, password))) {
+    // O endpoint de login remoto já cria o cookie seguro para contas sem MFA.
+    // Só precisamos validar a sessão aqui quando o login usou o cache local.
+    if (!authenticatedRemotely && !(await establishSession(user.id, password))) {
       setError('Não foi possível iniciar uma sessão segura. Tente novamente.');
       setLoading(false);
       return;
@@ -259,11 +261,6 @@ export default function AdminLogin() {
         return;
       }
 
-      if (!(await establishSession(pendingUserId, password))) {
-        setError('Não foi possível iniciar uma sessão segura. Tente novamente.');
-        setLoading(false);
-        return;
-      }
       if (!(await establishSession(pendingUserId, password))) {
         setError('Não foi possível iniciar uma sessão segura. Entre novamente com sua senha.');
         setLoading(false);
