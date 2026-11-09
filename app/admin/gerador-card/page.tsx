@@ -34,7 +34,7 @@ const montserrat = Montserrat({
 });
 const MONTSERRAT_FONT_FAMILY = montserrat.style.fontFamily;
 
-type CardTemplate = 'editorial' | 'urgente' | 'clean';
+type CardTemplate = 'editorial' | 'urgente' | 'clean' | 'social-clip';
 type CardKind = 'news' | 'column' | 'memorial';
 type ExportFormat = 'png' | 'jpeg';
 type ContentFormat = 'post' | 'vertical';
@@ -217,6 +217,7 @@ const templateOptions: Array<{
   { id: 'editorial', name: 'Editorial', description: 'Visual principal do portal, forte e equilibrado.' },
   { id: 'urgente', name: 'Urgente', description: 'Imagem de fundo em preto e branco.' },
   { id: 'clean', name: 'Clean', description: 'Leitura limpa, com composição elegante e minimalista.' },
+  { id: 'social-clip', name: 'Texto + vídeo', description: 'Manchete em fundo branco acima da foto ou do vídeo, como nas referências.' },
 ];
 
 const fontOptions: Array<{ id: TitleFont; label: string; family: string; weight?: number }> = [
@@ -884,6 +885,24 @@ function drawTemplate(
   socialAlign: TitleAlign
 ) {
   const canvasHeight = context.canvas.height;
+  if (template === 'social-clip') {
+    drawSocialClipTemplate(
+      context,
+      title,
+      heroMedia,
+      heroMediaWidth,
+      heroMediaHeight,
+      imageScale,
+      imageOffsetX,
+      imageOffsetY,
+      getFontFamily(titleFont),
+      titleFont,
+      titleFontStyle,
+      titleAlign
+    );
+    return;
+  }
+
   const verticalShift = canvasHeight - CANVAS_HEIGHT;
   // No formato 9:16 reservamos áreas seguras para a interface do Reels/TikTok.
   const topInset = verticalShift > 0 ? 170 : 0;
@@ -1024,6 +1043,75 @@ function drawTemplate(
     );
   }
 
+  context.restore();
+}
+
+function drawSocialClipTemplate(
+  context: CanvasRenderingContext2D,
+  title: string,
+  heroMedia: CanvasImageSource,
+  heroMediaWidth: number,
+  heroMediaHeight: number,
+  imageScale: number,
+  imageOffsetX: number,
+  imageOffsetY: number,
+  titleFontFamily: string,
+  titleFont: TitleFont,
+  titleFontStyle: TitleFontStyle,
+  titleAlign: TitleAlign
+) {
+  const width = context.canvas.width;
+  const height = context.canvas.height;
+  const textPanelHeight = Math.round(height * 0.42);
+  const mediaHeight = Math.round(height * 0.52);
+  const mediaY = textPanelHeight;
+  const textPaddingX = 72;
+  const textPaddingY = Math.round(textPanelHeight * 0.1);
+  const wrappedTitle = wrapText(
+    context,
+    title,
+    width - textPaddingX * 2,
+    textPanelHeight - textPaddingY * 2,
+    titleFontFamily,
+    titleFontStyle,
+    undefined,
+    titleFont
+  );
+  const style = getEffectiveFontStyleParts(titleFont, titleFontStyle);
+  const textAlign = titleAlign === 'center' ? 'center' : titleAlign === 'right' ? 'right' : 'left';
+  const textX = titleAlign === 'center' ? width / 2 : titleAlign === 'right' ? width - textPaddingX : textPaddingX;
+  const textHeight = wrappedTitle.lines.length * wrappedTitle.lineHeight;
+  const firstLineY = textPaddingY + (textPanelHeight - textPaddingY * 2 - textHeight) / 2 + wrappedTitle.fontSize;
+
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = '#FFFFFF';
+  context.fillRect(0, 0, width, height);
+
+  context.fillStyle = '#111111';
+  context.font = `${style.fontStyle} ${style.fontWeight} ${wrappedTitle.fontSize}px ${titleFontFamily}`;
+  context.textAlign = textAlign;
+  wrappedTitle.lines.forEach((line, index) => {
+    context.fillText(line, textX, firstLineY + index * wrappedTitle.lineHeight);
+  });
+  context.textAlign = 'start';
+
+  context.save();
+  context.beginPath();
+  context.rect(0, mediaY, width, mediaHeight);
+  context.clip();
+  drawCoverImage(
+    context,
+    heroMedia,
+    heroMediaWidth,
+    heroMediaHeight,
+    0,
+    mediaY,
+    width,
+    mediaHeight,
+    imageScale,
+    imageOffsetX,
+    imageOffsetY
+  );
   context.restore();
 }
 
@@ -3736,6 +3824,8 @@ export default function GeradorCardPage() {
                         ? 'Modelo Editorial'
                         : selectedTemplate === 'urgente'
                           ? 'Modelo Urgente'
+                          : selectedTemplate === 'social-clip'
+                            ? 'Texto + vídeo'
                           : 'Modelo Clean'}
                   </div>
                 </div>
