@@ -6,7 +6,6 @@ import {
   Clock,
   Download,
   Facebook,
-  FolderOpen,
   Globe,
   ImageUp,
   Instagram,
@@ -14,9 +13,7 @@ import {
   Link2,
   Music2,
   RefreshCw,
-  Save,
   Sparkles,
-  Trash2,
   Youtube,
 } from 'lucide-react';
 import AdminSidebar from '@/app/components/AdminSidebar';
@@ -68,47 +65,6 @@ type SocialPlatformKey = 'instagram' | 'tiktok' | 'youtube' | 'facebook' | 'webs
 type SocialLinkEntry = { value: string; enabled: boolean };
 type SocialLinksState = Record<SocialPlatformKey, SocialLinkEntry> & { otherLabel: string };
 type SocialBadgeEntry = { platform: SocialPlatformKey; text: string; color: string };
-type CardGeneratorPreset = {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  config: {
-    cardKind: CardKind;
-    selectedTemplate: CardTemplate;
-    exportFormat: ExportFormat;
-    titleFont: TitleFont;
-    titleFontStyle: TitleFontStyle;
-    titleFontSize?: number;
-    titleAlign?: TitleAlign;
-    logoPosition: LogoPosition;
-    introAnimation: IntroAnimation;
-    headerTheme: HeaderTheme;
-    footerGradient: FooterGradient;
-    showCategory: boolean;
-    isCategoryBackgroundTransparent: boolean;
-    categoryBackgroundColor: string;
-    categoryTextColor: string;
-    categoryBorderColor: string;
-    categoryFont?: TitleFont;
-    categoryFontStyle?: TitleFontStyle;
-    categoryFontSize?: number;
-    categoryPadding?: number;
-    categoryBorderRadius?: number;
-    categoryTitleGap?: number;
-    logoSize?: number;
-    logoOffsetX?: number;
-    logoOffsetY?: number;
-    columnTitleSize?: number;
-    columnTitleOffsetX?: number;
-    columnTitleOffsetY?: number;
-    columnAccentOffsetX?: number;
-    columnAccentOffsetY?: number;
-    imageScale: number;
-    imageOffsetX: number;
-    imageOffsetY: number;
-  };
-};
 
 type WrappedText = {
   fontSize: number;
@@ -124,7 +80,6 @@ const CARD_ACCENT_RED = '#C1121F';
 const VIDEO_EXPORT_EXTENSION = 'webm';
 const VIDEO_EXPORT_MAX_DURATION_SECONDS = 180;
 const VIDEO_INTRO_DURATION_SECONDS = 1.15;
-const CARD_PRESETS_STORAGE_KEY = 'rbn-card-generator-presets';
 // As redes sociais/site são informações de marca que o usuário costuma
 // cadastrar uma única vez e reaproveitar em muitos cards, por isso ficam
 // salvas no navegador (como as predefinições) em vez de resetar a cada
@@ -466,48 +421,6 @@ function getIntroFrameStyle(animation: IntroAnimation, progress: number) {
     translateY: 58 * (1 - eased),
     scale: 1,
   };
-}
-
-function isCardGeneratorPreset(value: unknown): value is CardGeneratorPreset {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const preset = value as CardGeneratorPreset;
-  return Boolean(
-    typeof preset.id === 'string' &&
-      typeof preset.name === 'string' &&
-      typeof preset.createdAt === 'string' &&
-      typeof preset.updatedAt === 'string' &&
-      preset.config &&
-      typeof preset.config === 'object'
-  );
-}
-
-function readCardPresetsFromStorage() {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-
-  try {
-    const storedPresets = window.localStorage.getItem(CARD_PRESETS_STORAGE_KEY);
-    if (!storedPresets) {
-      return [];
-    }
-
-    const parsedValue: unknown = JSON.parse(storedPresets);
-    return Array.isArray(parsedValue) ? parsedValue.filter(isCardGeneratorPreset) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCardPresetsToStorage(presets: CardGeneratorPreset[]) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.setItem(CARD_PRESETS_STORAGE_KEY, JSON.stringify(presets));
 }
 
 function isSocialLinkEntry(value: unknown): value is SocialLinkEntry {
@@ -1615,10 +1528,6 @@ export default function GeradorCardPage() {
   const [previewKind, setPreviewKind] = useState<PreviewKind | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [savedPresets, setSavedPresets] = useState<CardGeneratorPreset[]>(() => readCardPresetsFromStorage());
-  const [presetName, setPresetName] = useState('');
-  const [selectedPresetId, setSelectedPresetId] = useState('');
-  const [presetMessage, setPresetMessage] = useState('');
   const previewRequestIdRef = useRef(0);
   const uploadedVideoUrlRef = useRef<string | null>(null);
   const generatedVideoUrlRef = useRef<string | null>(null);
@@ -1744,21 +1653,6 @@ export default function GeradorCardPage() {
   }, [cardKind]);
 
   useEffect(() => {
-    setSavedPresets(readCardPresetsFromStorage());
-
-    const syncPresetsFromStorage = (event: StorageEvent) => {
-      if (event.key && event.key !== CARD_PRESETS_STORAGE_KEY) {
-        return;
-      }
-
-      setSavedPresets(readCardPresetsFromStorage());
-    };
-
-    window.addEventListener('storage', syncPresetsFromStorage);
-    return () => window.removeEventListener('storage', syncPresetsFromStorage);
-  }, []);
-
-  useEffect(() => {
     return () => {
       if (uploadedVideoUrlRef.current) {
         URL.revokeObjectURL(uploadedVideoUrlRef.current);
@@ -1838,187 +1732,6 @@ export default function GeradorCardPage() {
       };
     });
   }, [videoSourceDuration]);
-
-  const currentPresetConfig = useMemo(
-    () => ({
-      cardKind,
-      selectedTemplate,
-      exportFormat,
-      titleFont,
-      titleFontStyle,
-      titleFontSize,
-      titleAlign,
-      logoPosition,
-      logoSize,
-      logoOffsetX,
-      logoOffsetY,
-      columnTitleSize,
-      columnTitleOffsetX,
-      columnTitleOffsetY,
-      columnAccentOffsetX,
-      columnAccentOffsetY,
-      introAnimation,
-      headerTheme,
-      footerGradient,
-      showCategory,
-      isCategoryBackgroundTransparent,
-      categoryBackgroundColor,
-      categoryTextColor,
-      categoryBorderColor,
-      categoryFont,
-      categoryFontStyle,
-      categoryFontSize,
-      categoryPadding,
-      categoryBorderRadius,
-      categoryTitleGap,
-      imageScale,
-      imageOffsetX,
-      imageOffsetY,
-    }),
-    [
-      cardKind,
-      selectedTemplate,
-      exportFormat,
-      titleFont,
-      titleFontStyle,
-      titleFontSize,
-      titleAlign,
-      logoPosition,
-      logoSize,
-      logoOffsetX,
-      logoOffsetY,
-      columnTitleSize,
-      columnTitleOffsetX,
-      columnTitleOffsetY,
-      columnAccentOffsetX,
-      columnAccentOffsetY,
-      introAnimation,
-      headerTheme,
-      footerGradient,
-      showCategory,
-      isCategoryBackgroundTransparent,
-      categoryBackgroundColor,
-      categoryTextColor,
-      categoryBorderColor,
-      categoryFont,
-      categoryFontStyle,
-      categoryFontSize,
-      categoryPadding,
-      categoryBorderRadius,
-      categoryTitleGap,
-      imageScale,
-      imageOffsetX,
-      imageOffsetY,
-    ]
-  );
-
-  const persistPresets = (nextPresets: CardGeneratorPreset[]) => {
-    try {
-      writeCardPresetsToStorage(nextPresets);
-      setSavedPresets(nextPresets);
-    } catch {
-      setErrorMessage('Nao foi possivel salvar as predefinicoes do gerador de card.');
-    }
-  };
-
-  const applyPreset = (preset: CardGeneratorPreset) => {
-    setCardKind(preset.config.cardKind);
-    setSelectedTemplate(preset.config.selectedTemplate);
-    setExportFormat(preset.config.exportFormat);
-    setTitleFont(preset.config.titleFont);
-    setTitleFontStyle(preset.config.titleFontStyle);
-    setTitleFontSize(typeof preset.config.titleFontSize === 'number' && Number.isFinite(preset.config.titleFontSize) ? preset.config.titleFontSize : 82);
-    setTitleAlign(preset.config.titleAlign ?? 'left');
-    setLogoPosition(preset.config.logoPosition);
-    setLogoSize(typeof preset.config.logoSize === 'number' && Number.isFinite(preset.config.logoSize) ? preset.config.logoSize : 140);
-    setLogoOffsetX(typeof preset.config.logoOffsetX === 'number' && Number.isFinite(preset.config.logoOffsetX) ? preset.config.logoOffsetX : 0);
-    setLogoOffsetY(typeof preset.config.logoOffsetY === 'number' && Number.isFinite(preset.config.logoOffsetY) ? preset.config.logoOffsetY : 0);
-    setColumnTitleSize(typeof preset.config.columnTitleSize === 'number' && Number.isFinite(preset.config.columnTitleSize) ? preset.config.columnTitleSize : 64);
-    setColumnTitleOffsetX(typeof preset.config.columnTitleOffsetX === 'number' && Number.isFinite(preset.config.columnTitleOffsetX) ? preset.config.columnTitleOffsetX : 0);
-    setColumnTitleOffsetY(typeof preset.config.columnTitleOffsetY === 'number' && Number.isFinite(preset.config.columnTitleOffsetY) ? preset.config.columnTitleOffsetY : 0);
-    setColumnAccentOffsetX(typeof preset.config.columnAccentOffsetX === 'number' && Number.isFinite(preset.config.columnAccentOffsetX) ? preset.config.columnAccentOffsetX : 0);
-    setColumnAccentOffsetY(typeof preset.config.columnAccentOffsetY === 'number' && Number.isFinite(preset.config.columnAccentOffsetY) ? preset.config.columnAccentOffsetY : 0);
-    setIntroAnimation(preset.config.introAnimation);
-    setHeaderTheme(preset.config.headerTheme);
-    setFooterGradient(preset.config.footerGradient);
-    setShowCategory(preset.config.showCategory);
-    setIsCategoryBackgroundTransparent(preset.config.isCategoryBackgroundTransparent);
-    setCategoryBackgroundColor(preset.config.categoryBackgroundColor);
-    setCategoryTextColor(preset.config.categoryTextColor);
-    setCategoryBorderColor(preset.config.categoryBorderColor);
-    // Predefinicoes salvas antes desta atualizacao nao tem esses campos.
-    // Nesse caso, reproduzimos exatamente o visual antigo da etiqueta
-    // (mesma fonte do titulo, negrito, 30px, 26px de espacamento e cantos
-    // totalmente arredondados) em vez de assumir o novo padrao Montserrat,
-    // para nao alterar o resultado de predefinicoes ja salvas.
-    setCategoryFont(preset.config.categoryFont ?? preset.config.titleFont);
-    setCategoryFontStyle(preset.config.categoryFontStyle ?? 'bold');
-    setCategoryFontSize(typeof preset.config.categoryFontSize === 'number' && Number.isFinite(preset.config.categoryFontSize) ? preset.config.categoryFontSize : 30);
-    setCategoryPadding(typeof preset.config.categoryPadding === 'number' && Number.isFinite(preset.config.categoryPadding) ? preset.config.categoryPadding : 26);
-    setCategoryBorderRadius(typeof preset.config.categoryBorderRadius === 'number' && Number.isFinite(preset.config.categoryBorderRadius) ? preset.config.categoryBorderRadius : 29);
-    setCategoryTitleGap(typeof preset.config.categoryTitleGap === 'number' && Number.isFinite(preset.config.categoryTitleGap) ? preset.config.categoryTitleGap : 88);
-    setImageScale(preset.config.imageScale);
-    setImageOffsetX(preset.config.imageOffsetX);
-    setImageOffsetY(preset.config.imageOffsetY);
-    setSelectedPresetId(preset.id);
-    setPresetName(preset.name);
-    setPresetMessage(`Predefinicao "${preset.name}" aplicada.`);
-    setErrorMessage('');
-  };
-
-  const handleSavePreset = () => {
-    const normalizedName = presetName.trim();
-    if (!normalizedName) {
-      setErrorMessage('Informe um nome para salvar a predefinicao.');
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const existingPreset = savedPresets.find((preset) => preset.id === selectedPresetId) ?? savedPresets.find((preset) => preset.name.toLowerCase() === normalizedName.toLowerCase());
-
-    const nextPreset: CardGeneratorPreset = {
-      id: existingPreset?.id ?? `${Date.now()}`,
-      name: normalizedName,
-      createdAt: existingPreset?.createdAt ?? now,
-      updatedAt: now,
-      config: currentPresetConfig,
-    };
-
-    const nextPresets = existingPreset
-      ? savedPresets.map((preset) => (preset.id === existingPreset.id ? nextPreset : preset))
-      : [nextPreset, ...savedPresets];
-
-    persistPresets(nextPresets);
-    setSelectedPresetId(nextPreset.id);
-    setPresetName(nextPreset.name);
-    setPresetMessage(existingPreset ? `Predefinicao "${nextPreset.name}" atualizada.` : `Predefinicao "${nextPreset.name}" salva.`);
-    setErrorMessage('');
-  };
-
-  const handleApplySelectedPreset = () => {
-    const preset = savedPresets.find((currentPreset) => currentPreset.id === selectedPresetId);
-    if (!preset) {
-      setErrorMessage('Selecione uma predefinicao para usar.');
-      return;
-    }
-
-    applyPreset(preset);
-  };
-
-  const handleDeleteSelectedPreset = () => {
-    const preset = savedPresets.find((currentPreset) => currentPreset.id === selectedPresetId);
-    if (!preset) {
-      setErrorMessage('Selecione uma predefinicao para excluir.');
-      return;
-    }
-
-    const nextPresets = savedPresets.filter((currentPreset) => currentPreset.id !== preset.id);
-    persistPresets(nextPresets);
-    setSelectedPresetId('');
-    setPresetName('');
-    setPresetMessage(`Predefinicao "${preset.name}" removida.`);
-    setErrorMessage('');
-  };
 
   const handleMediaUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -2620,87 +2333,6 @@ export default function GeradorCardPage() {
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">Configuração</h2>
                   <p className="mt-1 text-sm text-gray-500">Monte o card com base na notícia cadastrada.</p>
-                </div>
-
-                <div className="space-y-4 rounded-2xl border border-[#991B1B]/15 bg-[#fff7f7] p-4">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Predefinicoes salvas</p>
-                    <p className="mt-1 text-xs text-gray-500">Guarde seu estilo favorito do card para reaplicar sempre que quiser.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="presetName" className="text-sm font-semibold text-gray-800">
-                      Nome da predefinicao
-                    </label>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <input
-                        id="presetName"
-                        type="text"
-                        value={presetName}
-                        onChange={(event) => {
-                          setPresetName(event.target.value);
-                          setPresetMessage('');
-                        }}
-                        placeholder="Ex.: Padrao stories urgente"
-                        className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#991B1B] focus:ring-2 focus:ring-[#991B1B]/10"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSavePreset}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#991B1B] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#7F1D1D]"
-                      >
-                        <Save className="h-4 w-4" />
-                        Salvar
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="savedPreset" className="text-sm font-semibold text-gray-800">
-                      Predefinicoes disponiveis
-                    </label>
-                    <select
-                      id="savedPreset"
-                      value={selectedPresetId}
-                      onChange={(event) => {
-                        const nextPresetId = event.target.value;
-                        setSelectedPresetId(nextPresetId);
-                        const selectedPreset = savedPresets.find((preset) => preset.id === nextPresetId);
-                        setPresetName(selectedPreset?.name ?? '');
-                        setPresetMessage('');
-                      }}
-                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-[#991B1B] focus:ring-2 focus:ring-[#991B1B]/10"
-                    >
-                      <option value="">Selecione uma predefinicao salva</option>
-                      {savedPresets.map((preset) => (
-                        <option key={preset.id} value={preset.id}>
-                          {preset.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <button
-                        type="button"
-                        onClick={handleApplySelectedPreset}
-                        disabled={!selectedPresetId}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#991B1B]/20 bg-white px-4 py-3 text-sm font-semibold text-[#991B1B] transition hover:bg-[#fff1f1] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <FolderOpen className="h-4 w-4" />
-                        Usar predefinicao
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDeleteSelectedPreset}
-                        disabled={!selectedPresetId}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Excluir
-                      </button>
-                    </div>
-                  </div>
-
-                  {presetMessage && <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{presetMessage}</p>}
                 </div>
 
                 <div className="space-y-2">
