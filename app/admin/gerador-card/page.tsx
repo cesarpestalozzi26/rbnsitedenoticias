@@ -1570,7 +1570,7 @@ export default function GeradorCardPage() {
   const [titleFontSize, setTitleFontSize] = useState(82);
   const [titleAlign, setTitleAlign] = useState<TitleAlign>('left');
   const [logoPosition, setLogoPosition] = useState<LogoPosition>('right');
-  const [logoSize, setLogoSize] = useState(100);
+  const [logoSize, setLogoSize] = useState(140);
   const [logoOffsetX, setLogoOffsetX] = useState(0);
   const [logoOffsetY, setLogoOffsetY] = useState(0);
   const [columnTitleSize, setColumnTitleSize] = useState(64);
@@ -1930,7 +1930,7 @@ export default function GeradorCardPage() {
     setTitleFontSize(typeof preset.config.titleFontSize === 'number' && Number.isFinite(preset.config.titleFontSize) ? preset.config.titleFontSize : 82);
     setTitleAlign(preset.config.titleAlign ?? 'left');
     setLogoPosition(preset.config.logoPosition);
-    setLogoSize(typeof preset.config.logoSize === 'number' && Number.isFinite(preset.config.logoSize) ? preset.config.logoSize : 100);
+    setLogoSize(typeof preset.config.logoSize === 'number' && Number.isFinite(preset.config.logoSize) ? preset.config.logoSize : 140);
     setLogoOffsetX(typeof preset.config.logoOffsetX === 'number' && Number.isFinite(preset.config.logoOffsetX) ? preset.config.logoOffsetX : 0);
     setLogoOffsetY(typeof preset.config.logoOffsetY === 'number' && Number.isFinite(preset.config.logoOffsetY) ? preset.config.logoOffsetY : 0);
     setColumnTitleSize(typeof preset.config.columnTitleSize === 'number' && Number.isFinite(preset.config.columnTitleSize) ? preset.config.columnTitleSize : 64);
@@ -3107,7 +3107,7 @@ export default function GeradorCardPage() {
                 <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
                   <div>
                     <p className="text-sm font-semibold text-gray-800">Ajuste fino da logo</p>
-                    <p className="text-xs text-gray-500">Esses controles valem para Notícia, Card de Coluna e Luto.</p>
+                    <p className="text-xs text-gray-500">O tamanho e a posição são aplicados a todos os modelos de card.</p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-3">
                     <label className="space-y-2 text-sm font-semibold text-gray-800">
@@ -3159,7 +3159,7 @@ export default function GeradorCardPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      setLogoSize(100);
+                      setLogoSize(140);
                       setLogoOffsetX(0);
                       setLogoOffsetY(0);
                     }}
