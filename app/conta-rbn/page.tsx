@@ -1,11 +1,11 @@
 import RbnAuthPanel from '@/app/components/RbnAuthPanel';
 
-export default function ContaRbnPage({
+export default async function ContaRbnPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ mode?: string }> | { mode?: string };
+  searchParams: Promise<{ mode?: string }>;
 }) {
-  const mode = typeof searchParams === 'object' && searchParams !== null && 'mode' in searchParams ? searchParams.mode : undefined;
+  const { mode } = await searchParams;
   const initialMode = mode === 'create' ? 'create' : 'login';
 
   return (
